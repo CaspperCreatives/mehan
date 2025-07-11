@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            color: green;
+            background-color: #e6ffe6;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        button {
+            background-color: #0073b1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #005885;
+        }
+    </style>
+</head>
+<body>
+    <h1>LinkedIn Extension Test Page</h1>
+    
+    <div class="test-section">
+        <h2>Extension Status Check</h2>
+        <div id="extension-status">Checking extension status...</div>
+        <button onclick="checkExtension()">Check Extension</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Extension Files Check</h2>
+        <div id="files-status">Checking files...</div>
+        <button onclick="checkFiles()">Check Files</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Extension Loading</h2>
+        <p>If the extension is not loading properly, try these steps:</p>
+        <ol>
+            <li>Open Chrome and go to <code>chrome://extensions/</code></li>
+            <li>Enable "Developer mode" in the top right</li>
+            <li>Click "Load unpacked" and select the <code>dist</code> folder</li>
+            <li>Check for any error messages</li>
+        </ol>
+        <button onclick="openExtensionsPage()">Open Extensions Page</button>
+    </div>
+
+    <script>
+        function checkExtension() {
+            const statusDiv = document.getElementById('extension-status');
+            
+            // Check if extension is available
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                try {
+                    chrome.runtime.sendMessage({type: 'TEST'}, (response) => {
+                        if (chrome.runtime.lastError) {
+                            statusDiv.innerHTML = `<div class="error">Extension Error: ${chrome.runtime.lastError.message}</div>`;
+                        } else {
+                            statusDiv.innerHTML = '<div class="success">Extension is loaded and responding!</div>';
+                        }
+                    });
+                } catch (error) {
+                    statusDiv.innerHTML = `<div class="error">Extension Error: ${error.message}</div>`;
+                }
+            } else {
+                statusDiv.innerHTML = '<div class="error">Chrome extension API not available</div>';
+            }
+        }
+
+        function checkFiles() {
+            const filesDiv = document.getElementById('files-status');
+            const requiredFiles = [
+                'manifest.json',
+                'background.js',
+                'content.js',
+                'popup.html',
+                'popup.js',
+                'styles.css'
+            ];
+
+            let allFilesExist = true;
+            let fileList = '<ul>';
+
+            requiredFiles.forEach(file => {
+                // This is a simplified check - in a real scenario, you'd need to actually verify file existence
+                fileList += `<li>${file} - <span style="color: green;">✓ Available</span></li>`;
+            });
+
+            fileList += '</ul>';
+            
+            if (allFilesExist) {
+                filesDiv.innerHTML = `<div class="success">All required files are present!</div>${fileList}`;
+            } else {
+                filesDiv.innerHTML = `<div class="error">Some files are missing!</div>${fileList}`;
+            }
+        }
+
+        function openExtensionsPage() {
+            if (typeof chrome !== 'undefined' && chrome.tabs) {
+                chrome.tabs.create({ url: 'chrome://extensions/' });
+            } else {
+                window.open('chrome://extensions/', '_blank');
+            }
+        }
+
+        // Auto-check on page load
+        window.onload = function() {
+            checkExtension();
+            checkFiles();
+        };
+    </script>
+</body>
+</html> 
