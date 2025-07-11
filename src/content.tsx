@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom';
-import { LinkedInProfileViewer } from './components/LinkedInProfileViewer';
+import React, { Suspense } from 'react';
 import './styles.css';
 import '@fortawesome/fontawesome-free/css/all.css';
 import '@fontsource/tajawal/300.css';
@@ -7,6 +7,32 @@ import '@fontsource/tajawal/400.css';
 import '@fontsource/tajawal/500.css';
 import '@fontsource/tajawal/700.css';
 import './utils/languageDetector';
+
+// Lazy load the main component to reduce initial bundle size
+const LinkedInProfileViewer = React.lazy(() => import('./components/LinkedInProfileViewer').then(module => ({ default: module.LinkedInProfileViewer })));
+
+// Loading component
+const LoadingComponent = () => (
+  <div className='loader-container'
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
+      flexDirection: 'column',
+    }}
+  >
+    <span className="loader" dir="ltr"></span>
+    <p 
+      style={{
+        fontSize: '21px',
+        fontWeight: '200',
+        marginTop: '20px',
+        color: '#6b7280'
+      }}
+    >Loading...</p>
+  </div>
+);
 
 // Create and inject the sidebar container
 const createSidebar = () => {
@@ -61,7 +87,9 @@ const initialize = async () => {
 
   // Render the profile viewer component
   ReactDOM.render(
-    <LinkedInProfileViewer />,
+    <Suspense fallback={<LoadingComponent />}>
+      <LinkedInProfileViewer />
+    </Suspense>,
     sidebarContainer
   );
 

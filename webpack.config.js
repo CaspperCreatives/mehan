@@ -56,7 +56,43 @@ module.exports = {
   },
   optimization: {
     chunkIds: 'named',
-    moduleIds: 'named'
+    moduleIds: 'named',
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+          priority: 10
+        },
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+          name: 'react',
+          chunks: 'all',
+          priority: 20
+        },
+        fontawesome: {
+          test: /[\\/]node_modules[\\/]@fortawesome[\\/]/,
+          name: 'fontawesome',
+          chunks: 'all',
+          priority: 15
+        },
+        fonts: {
+          test: /[\\/]node_modules[\\/]@fontsource[\\/]/,
+          name: 'fonts',
+          chunks: 'all',
+          priority: 15
+        }
+      }
+    },
+    usedExports: true,
+    sideEffects: false
+  },
+  performance: {
+    hints: 'warning',
+    maxEntrypointSize: 512000,
+    maxAssetSize: 512000
   },
   plugins: [
     new CopyPlugin({
