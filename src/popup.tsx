@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom/client';
 import './utils/languageDetector';
 import { useLanguage, getTranslation } from './utils/translations';
 
@@ -31,9 +31,13 @@ const Popup: React.FC = () => {
   );
 };
 
-ReactDOM.render(
-  <React.StrictMode>
-    <Popup />
-  </React.StrictMode>,
-  document.getElementById('root')
-); 
+// Use React 18's createRoot API
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <Popup />
+    </React.StrictMode>
+  );
+} 

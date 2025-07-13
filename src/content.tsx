@@ -1,4 +1,4 @@
-import ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom/client';
 import React, { Suspense } from 'react';
 import './styles.css';
 import '@fortawesome/fontawesome-free/css/all.css';
@@ -8,8 +8,8 @@ import '@fontsource/tajawal/500.css';
 import '@fontsource/tajawal/700.css';
 import './utils/languageDetector';
 
-// Lazy load the main component to reduce initial bundle size
-const LinkedInProfileViewer = React.lazy(() => import('./components/LinkedInProfileViewer').then(module => ({ default: module.LinkedInProfileViewer })));
+// Import the component directly instead of lazy loading to avoid issues in extension context
+import { LinkedInProfileViewer } from './components/LinkedInProfileViewer';
 
 // Loading component
 const LoadingComponent = () => (
@@ -85,12 +85,14 @@ const initialize = async () => {
   const sidebarContainer = createSidebar();
   const toggleButton = createToggleButton();
 
+  // Use React 18's createRoot API
+  const root = ReactDOM.createRoot(sidebarContainer);
+  
   // Render the profile viewer component
-  ReactDOM.render(
+  root.render(
     <Suspense fallback={<LoadingComponent />}>
       <LinkedInProfileViewer />
-    </Suspense>,
-    sidebarContainer
+    </Suspense>
   );
 
   // Set up toggle logic

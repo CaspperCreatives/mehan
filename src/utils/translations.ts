@@ -111,6 +111,11 @@ export interface Translations {
   organizations: string;
   contactInfo: string;
   causes: string;
+  
+  // Refresh limit functionality
+  remainingRefreshes: string;
+  resetsAt: string;
+  dailyLimitReached: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -203,7 +208,10 @@ export const translations: Record<Language, Translations> = {
     testScores: 'Test Scores',
     organizations: 'Organizations',
     contactInfo: 'Contact Info',
-    causes: 'Causes'
+    causes: 'Causes',
+    remainingRefreshes: 'Remaining refreshes',
+    resetsAt: 'Resets at',
+    dailyLimitReached: 'Daily limit reached'
   },
   ar: {
     upgradeToPremium: 'ترقية الى برينيوم',
@@ -294,7 +302,10 @@ export const translations: Record<Language, Translations> = {
     testScores: 'درجات الاختبار',
     organizations: 'المنظمات',
     contactInfo: 'معلومات الاتصال',
-    causes: 'القضايا التطوعية'
+    causes: 'القضايا التطوعية',
+    remainingRefreshes: 'التحديثات المتبقية',
+    resetsAt: 'إعادة تعيين في',
+    dailyLimitReached: 'تم الوصول للحد اليومي'
   }
 };
 

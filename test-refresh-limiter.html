@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refresh Limiter Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Refresh Limiter Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Refresh Limiter</h2>
+        <p>This test simulates the refresh limiter functionality. You can refresh up to 2 times per day.</p>
+        
+        <button onclick="checkLimit()">Check Current Limit</button>
+        <button onclick="simulateRefresh()">Simulate Refresh</button>
+        <button onclick="simulateFailedRefresh()">Simulate Failed AI Analysis</button>
+        <button onclick="resetLimit()">Reset Daily Limit</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        
+        <div id="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Current Status</h2>
+        <div id="currentStatus"></div>
+    </div>
+
+    <script>
+        // Mock Chrome storage API for testing
+        const mockStorage = {};
+        
+        if (typeof chrome === 'undefined') {
+            window.chrome = {
+                storage: {
+                    local: {
+                        get: (keys, callback) => {
+                            const result = {};
+                            if (Array.isArray(keys)) {
+                                keys.forEach(key => {
+                                    result[key] = mockStorage[key] || null;
+                                });
+                            } else {
+                                result[keys] = mockStorage[keys] || null;
+                            }
+                            callback(result);
+                        },
+                        set: (data, callback) => {
+                            Object.assign(mockStorage, data);
+                            if (callback) callback();
+                        }
+                    }
+                }
+            };
+        }
+
+        // Simplified RefreshLimiter class for testing
+        class RefreshLimiter {
+            static REFRESH_LIMIT = 2;
+            static STORAGE_KEY = 'linkedin_profile_refresh_data';
+
+            static getToday() {
+                return new Date().toDateString();
+            }
+
+            static async getRefreshData() {
+                return new Promise((resolve) => {
+                    chrome.storage.local.get([this.STORAGE_KEY], (result) => {
+                        const data = result[this.STORAGE_KEY];
+                        if (!data) {
+                            resolve({ count: 0, date: this.getToday() });
+                        } else {
+                            resolve(data);
+                        }
+                    });
+                });
+            }
+
+            static async setRefreshData(data) {
+                return new Promise((resolve) => {
+                    chrome.storage.local.set({ [this.STORAGE_KEY]: data }, resolve);
+                });
+            }
+
+            static async canRefresh() {
+                const today = this.getToday();
+                const data = await this.getRefreshData();
+
+                if (data.date !== today) {
+                    await this.setRefreshData({ count: 0, date: today });
+                    return {
+                        canRefresh: true,
+                        remaining: this.REFRESH_LIMIT,
+                        resetTime: this.getNextResetTime()
+                    };
+                }
+
+                const remaining = Math.max(0, this.REFRESH_LIMIT - data.count);
+                return {
+                    canRefresh: data.count < this.REFRESH_LIMIT,
+                    remaining,
+                    resetTime: this.getNextResetTime()
+                };
+            }
+
+            static async incrementRefreshCount() {
+                const today = this.getToday();
+                const data = await this.getRefreshData();
+
+                if (data.date !== today) {
+                    await this.setRefreshData({ count: 1, date: today });
+                } else {
+                    await this.setRefreshData({ count: data.count + 1, date: today });
+                }
+            }
+
+            static getNextResetTime() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(0, 0, 0, 0);
+                return tomorrow.toLocaleString();
+            }
+
+            static async resetDailyLimit() {
+                await this.setRefreshData({ count: 0, date: this.getToday() });
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function updateCurrentStatus() {
+            RefreshLimiter.canRefresh().then(limit => {
+                const statusDiv = document.getElementById('currentStatus');
+                statusDiv.innerHTML = `
+                    <p><strong>Can Refresh:</strong> ${limit.canRefresh ? 'Yes' : 'No'}</p>
+                    <p><strong>Remaining Refreshes:</strong> ${limit.remaining}</p>
+                    <p><strong>Resets At:</strong> ${limit.resetTime}</p>
+                `;
+            });
+        }
+
+        async function checkLimit() {
+            try {
+                const limit = await RefreshLimiter.canRefresh();
+                showStatus(`Limit check: Can refresh = ${limit.canRefresh}, Remaining = ${limit.remaining}`, 'success');
+                updateCurrentStatus();
+            } catch (error) {
+                showStatus(`Error checking limit: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateRefresh() {
+            try {
+                const limit = await RefreshLimiter.canRefresh();
+                if (!limit.canRefresh) {
+                    showStatus('Cannot refresh - daily limit reached!', 'error');
+                    return;
+                }
+
+                await RefreshLimiter.incrementRefreshCount();
+                const newLimit = await RefreshLimiter.canRefresh();
+                showStatus(`Refresh successful! Remaining: ${newLimit.remaining}`, 'success');
+                updateCurrentStatus();
+            } catch (error) {
+                showStatus(`Error simulating refresh: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateFailedRefresh() {
+            try {
+                const limit = await RefreshLimiter.canRefresh();
+                if (!limit.canRefresh) {
+                    showStatus('Cannot refresh - daily limit reached!', 'error');
+                    return;
+                }
+
+                // Simulate a failed AI analysis - don't increment the count
+                showStatus('AI analysis failed - not counting against daily limit!', 'error');
+                // Note: In the real implementation, this would not increment the refresh count
+                updateCurrentStatus();
+            } catch (error) {
+                showStatus(`Error simulating failed refresh: ${error.message}`, 'error');
+            }
+        }
+
+        async function resetLimit() {
+            try {
+                await RefreshLimiter.resetDailyLimit();
+                showStatus('Daily limit reset successfully!', 'success');
+                updateCurrentStatus();
+            } catch (error) {
+                showStatus(`Error resetting limit: ${error.message}`, 'error');
+            }
+        }
+
+        function clearStorage() {
+            Object.keys(mockStorage).forEach(key => {
+                delete mockStorage[key];
+            });
+            showStatus('Storage cleared!', 'info');
+            updateCurrentStatus();
+        }
+
+        // Initialize status on page load
+        updateCurrentStatus();
+    </script>
+</body>
+</html> 

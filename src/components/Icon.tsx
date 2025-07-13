@@ -52,6 +52,15 @@ export const Icon: React.FC<IconProps> = ({
           pathStrategy = 'absolute';
         }
         
+        // Convert relative paths to absolute URLs to prevent "Invalid URL" errors
+        if (svgPath.startsWith('/') && typeof window !== 'undefined') {
+          svgPath = new URL(svgPath, window.location.origin).href;
+          pathStrategy += ' (converted to absolute)';
+        } else if (!svgPath.startsWith('http://') && !svgPath.startsWith('https://') && !svgPath.startsWith('chrome-extension://') && typeof window !== 'undefined') {
+          svgPath = new URL(svgPath, window.location.href).href;
+          pathStrategy += ' (converted to absolute)';
+        }
+        
         console.log(`[Icon] Loading: "${name}" → "${normalizedName}.svg" using ${pathStrategy}: ${svgPath}`);
         
         const response = await fetch(svgPath);

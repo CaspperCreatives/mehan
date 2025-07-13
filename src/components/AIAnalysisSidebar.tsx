@@ -3,9 +3,10 @@ import { AIAnalysisResult } from '../utils/aiAnalyzer';
 import { Icon, IconNames, getIconNameFromSection } from './Icon';
 import { useLanguage, getTranslation, Language } from '../utils/translations';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import gsap from 'gsap';
 import { ExportButtons } from './ExportButtons';
+import { RefreshLimiter } from '../utils/refreshLimiter';
 
 interface AIAnalysisSidebarProps {
   analysis: AIAnalysisResult | null;
@@ -1006,11 +1007,54 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
 export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, loading, error, refreshProfileData, profile }) => {
   const currentLanguage = useLanguage();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshLimit, setRefreshLimit] = useState<{ canRefresh: boolean; remaining: number; resetTime: string }>({
+    canRefresh: true,
+    remaining: 2,
+    resetTime: ''
+  });
+  const [showLimitInfo, setShowLimitInfo] = useState(false);
+  const [aiErrorBeforeRefresh, setAiErrorBeforeRefresh] = useState<string | null>(null);
+
+  // Check refresh limit on component mount
+  useEffect(() => {
+    const checkRefreshLimit = async () => {
+      const limit = await RefreshLimiter.canRefresh();
+      setRefreshLimit(limit);
+    };
+    checkRefreshLimit();
+  }, []);
 
   const handleRefresh = async () => {
+    // Check if user can refresh
+    const limit = await RefreshLimiter.canRefresh();
+    if (!limit.canRefresh) {
+      setShowLimitInfo(true);
+      setTimeout(() => setShowLimitInfo(false), 3000);
+      return;
+    }
+
+    // Store the current AI error state before refresh
+    setAiErrorBeforeRefresh(error);
+
     setIsRefreshing(true);
     try {
       await refreshProfileData();
+      
+      // Check if there's still an AI error after refresh
+      // If there was an error before and there's still an error, don't count it
+      if (aiErrorBeforeRefresh && error) {
+        console.log('AI analysis still failed, not counting against daily limit');
+        return;
+      }
+      
+      // Only increment refresh count if the refresh was successful (no AI error)
+      await RefreshLimiter.incrementRefreshCount();
+      // Update the limit state
+      const newLimit = await RefreshLimiter.canRefresh();
+      setRefreshLimit(newLimit);
+    } catch (refreshError) {
+      // If refresh fails completely, don't increment the count
+      console.log('Refresh failed, not counting against daily limit:', refreshError);
     } finally {
       setIsRefreshing(false);
     }
@@ -1119,14 +1163,90 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, 
         justifyContent: 'space-between'
       }}
       >  
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div className="refresh-button" onClick={handleRefresh}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+          <div 
+            className="refresh-button" 
+            onClick={handleRefresh}
+            style={{
+              cursor: refreshLimit.canRefresh ? 'pointer' : 'not-allowed',
+              opacity: refreshLimit.canRefresh ? 1 : 0.5,
+              position: 'relative'
+            }}
+          >
             <FontAwesomeIcon 
               icon={faRotateRight} 
               className={isRefreshing ? 'fa-spin' : ''}
-              style={{ fontSize: '16px', color: '#6b7280' }}
+              style={{ 
+                fontSize: '16px', 
+                color: refreshLimit.canRefresh ? '#6b7280' : '#9ca3af' 
+              }}
             />
+            {/* Refresh count indicator */}
+            <div style={{
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              backgroundColor: refreshLimit.remaining > 0 ? '#22c55e' : '#ef4444',
+              color: 'white',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              fontSize: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold'
+            }}>
+              {refreshLimit.remaining}
+            </div>
           </div>
+          
+          {/* Info tooltip */}
+          <div 
+            style={{
+              cursor: 'pointer',
+              color: '#6b7280',
+              fontSize: '14px'
+            }}
+            onMouseEnter={() => setShowLimitInfo(true)}
+            onMouseLeave={() => setShowLimitInfo(false)}
+          >
+            <FontAwesomeIcon icon={faInfoCircle} />
+          </div>
+          
+          {/* Limit info popup */}
+          {showLimitInfo && (
+            <div style={{
+              position: 'absolute',
+              top: '30px',
+              left: '0',
+              backgroundColor: '#1f2937',
+              color: 'white',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+              zIndex: 1000,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #374151'
+            }}>
+              {refreshLimit.canRefresh ? (
+                <div>
+                  <div>{getTranslation(currentLanguage, 'remainingRefreshes')}: {refreshLimit.remaining}</div>
+                  <div style={{ fontSize: '10px', opacity: 0.8 }}>
+                    {getTranslation(currentLanguage, 'resetsAt')}: {refreshLimit.resetTime}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div>{getTranslation(currentLanguage, 'dailyLimitReached')}</div>
+                  <div style={{ fontSize: '10px', opacity: 0.8 }}>
+                    {getTranslation(currentLanguage, 'resetsAt')}: {refreshLimit.resetTime}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {analysis && !loading && !error && (
