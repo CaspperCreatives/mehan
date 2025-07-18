@@ -289,6 +289,168 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
     });
   };
 
+  /**
+  function to get the class name of the section
+  @returns { [key: string]: string }
+   */
+  const getSectionClassMap = (): { [key: string]: string } => ({
+    'summary': 'about-section',
+    'experiences': 'experience-section',
+    'education': 'education-section',
+    'skills': 'skills-section',
+    'projects': 'projects-section',
+    'recommendations': 'recommendations-section',
+    'causes': 'causes-section',
+    'honorsawards': 'honors-awards-section',
+    'volunteer': 'volunteering-section',
+    'languages': 'languages-section',
+    'publications': 'publications-section',
+    'certificates': 'certifications-section',
+    'patents': 'patents-section',
+    'testscores': 'test-scores-section',
+    'organizations': 'organizations-section',
+    'featured': 'featured-section',
+    'contactinfo': 'contact-info-section',
+    'headline': 'headline-section',
+    'profilepicture': 'profile-picture-section',
+    'backgroundimage': 'background-image-section',
+    'country': 'location-section',
+    'linkedinurl': 'url-section'
+  });
+
+  const handleSectionClick = (section: any) => {
+    console.log('section', section);
+    
+    setSelectedSection(section);
+    scrollToSection(section);
+  }
+
+  /**
+  function to scroll to the section in the page
+  @param section: the section to scroll to
+  @returns void
+   */
+  const scrollToSection = (section: any) => {
+    if (!section || !section.title) return;
+    
+    const sectionTitle = section.title.toLowerCase();
+    const sectionClassMap = getSectionClassMap();
+    const targetClassName = sectionClassMap[sectionTitle] || '';
+    
+    if (targetClassName) {
+      let targetSection: HTMLElement | null = null;
+      
+      // Special case for headline section
+      if (sectionTitle === 'headline') {
+        const mainElement = document.querySelector('main');
+        if (mainElement) {
+          targetSection = mainElement.querySelector('section:first-child') as HTMLElement;
+        }
+      } else if (sectionTitle === 'linkedinurl') {
+        // Special case for url section
+        targetSection = document.querySelector('.pv-profile-info-section') as HTMLElement;
+      } else {
+        targetSection = document.querySelector(`.${targetClassName}`) as HTMLElement;
+      }
+      
+      if (targetSection) {
+        document.querySelectorAll('.hover-section').forEach(el => {
+          el.classList.remove('hover-section');
+        });
+        
+        targetSection.classList.add('hover-section');
+        
+        window.scrollTo({
+          top: targetSection.offsetTop - 100,
+          behavior: 'smooth'
+        });
+        
+        setTimeout(() => {
+          targetSection.classList.remove('hover-section');
+        }, 5000);
+      } else {
+        const alternativeSelectors = [
+          `section:has(h2:contains("${sectionTitle}"))`,
+          `section:has(h3:contains("${sectionTitle}"))`,
+          `[data-section="${sectionTitle}"]`,
+          `#${sectionTitle}-section`,
+          `.${sectionTitle}-section`
+        ];
+        
+        for (const selector of alternativeSelectors) {
+          try {
+            const element = document.querySelector(selector) as HTMLElement;
+            if (element) {
+              element.classList.add('hover-section');
+              window.scrollTo({
+                top: element.offsetTop - 100,
+                behavior: 'smooth'
+              });
+              setTimeout(() => {
+                element.classList.remove('hover-section');
+              }, 5000);
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+      }
+    }
+  };
+
+  /**
+   * function to click the edit button in the section
+   * @param sectionTitle: the title of the section to click the edit button
+   * @returns void
+   */
+  const clickEditButton = (sectionTitle: string) => {
+    const sectionClassMap = getSectionClassMap();
+    const targetClassName = sectionClassMap[sectionTitle.toLowerCase()] || '';
+    
+    if (targetClassName) {
+      let targetSection: HTMLElement | null = null;
+      
+      // Special case for headline section
+      if (sectionTitle.toLowerCase() === 'headline') {
+        const mainElement = document.querySelector('main');
+        if (mainElement) {
+          targetSection = mainElement.querySelector('section:first-child') as HTMLElement;
+        }
+      } else if (sectionTitle.toLowerCase() === 'linkedinurl') {
+        // Special case for url section
+        targetSection = document.querySelector('.pv-profile-info-section') as HTMLElement;
+      } else {
+        targetSection = document.querySelector(`.${targetClassName}`) as HTMLElement;
+      }
+      
+      if (targetSection) {
+        let editButton: HTMLElement | null = null;
+        
+        // Special case for url section edit button
+        if (sectionTitle.toLowerCase() === 'linkedinurl') {
+            const allEditButtons = targetSection.querySelectorAll('a');
+            editButton = Array.from(allEditButtons).find(button => {
+              const svgElement = button.querySelector('svg');
+              return svgElement?.classList.contains('pv-profile-info-section__edit-button') && 
+                     button.getAttribute('href')?.includes('public-profile');
+            }) as HTMLElement;
+          } else {
+            editButton = targetSection.querySelector('a:has(use[href="#edit-medium"])') as HTMLElement;
+          }
+        
+        if (editButton) {
+          editButton.click();
+        } else {
+          const anyEditButton = targetSection.querySelector('a[href*="edit"], button[aria-label*="edit"], button[title*="edit"]') as HTMLElement;
+          if (anyEditButton) {
+            anyEditButton.click();
+          }
+        }
+      }
+    }
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -301,7 +463,7 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
           <div 
             key={`main-${index}`} 
             className={`section-card ${selectedSection && selectedSection.title.toLowerCase() === section.title.toLowerCase() ? 'active' : ''}`} 
-            onClick={() => setSelectedSection(section)}
+            onClick={() => handleSectionClick(section)}
           >
             <span className="title"
             style={{
@@ -333,7 +495,14 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
         {othersSectionsData.length > 0 && (
           <div 
             className={`section-card ${selectedSection && selectedSection.title.toLowerCase() === 'others' ? 'active' : ''}`} 
-            onClick={() => setSelectedSection({title: 'others'})}
+            onClick={() => {
+              setSelectedSection({title: 'others'});
+              // For "others" section, we'll highlight the first available "others" section
+              const firstOthersSection = othersSectionsData[0];
+              if (firstOthersSection) {
+                scrollToSection(firstOthersSection);
+              }
+            }}
           >
             <span className="title"
             style={{
@@ -371,6 +540,73 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
          overflow: 'auto'
         }}
         >
+          <div className='section-card-details-actions'
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '10px 0',
+            borderBottom: '1px solid #e5e7eb',
+            marginBottom: '15px'
+          }}
+          >
+            <button
+              onClick={() => {
+                const sectionTitle = selectedSection.title.toLowerCase();
+                clickEditButton(sectionTitle);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                backgroundColor: '#0B66C2',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#094785'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0B66C2'}
+            >
+              <svg role="img" aria-hidden="false" aria-label="Edit" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" data-supported-dps="24x24" data-test-icon="edit-medium">
+                <use href="#edit-medium" width="24" height="24"></use>
+              </svg>
+              Edit
+            </button>
+            
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#f3f4f6',
+                color: '#6b7280',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#e5e7eb';
+                e.currentTarget.style.color = '#374151';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                e.currentTarget.style.color = '#6b7280';
+              }}
+              title="Generate Content"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+            </button>
+          </div>
           <div className="section-card-details-content"
           style={{
             boxShadow: 'none',
@@ -540,7 +776,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                     fontSize: '16px',
                     fontWeight: '500',
                     color: 'rgb(25 25 25)',
-                    marginBottom: '10px'
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => {
+                    const languagesSection = findSectionByTitle('languages');
+                    if (languagesSection) {
+                      scrollToSection(languagesSection);
+                    }
                   }}
                   >{getTranslation(currentLanguage, 'languages')}</h4>
                   <div
@@ -576,7 +824,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                     fontSize: '16px',
                     fontWeight: '500',
                     color: 'rgb(25 25 25)',
-                    marginBottom: '10px'
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => {
+                    const publicationsSection = findSectionByTitle('publications');
+                    if (publicationsSection) {
+                      scrollToSection(publicationsSection);
+                    }
                   }}
                   >{getTranslation(currentLanguage, 'publications')}</h4>
                   <div
@@ -612,7 +872,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                     fontSize: '16px',
                     fontWeight: '500',
                     color: 'rgb(25 25 25)',
-                    marginBottom: '10px'
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => {
+                    const certificatesSection = findSectionByTitle('certificates');
+                    if (certificatesSection) {
+                      scrollToSection(certificatesSection);
+                    }
                   }}
                   >{getTranslation(currentLanguage, 'certificates')}</h4>
                   <div
@@ -648,7 +920,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                     fontSize: '16px',
                     fontWeight: '500',
                     color: 'rgb(25 25 25)',
-                    marginBottom: '10px'
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => {
+                    const honorsAwardsSection = findSectionByTitle('honorsawards');
+                    if (honorsAwardsSection) {
+                      scrollToSection(honorsAwardsSection);
+                    }
                   }}
                   >{getTranslation(currentLanguage, 'honorsAwards')}</h4>
                   <div
@@ -684,7 +968,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                     fontSize: '16px',
                     fontWeight: '500',
                     color: 'rgb(25 25 25)',
-                    marginBottom: '10px'
+                    marginBottom: '10px',
+                    cursor: 'pointer',
+                    padding: '5px',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => {
+                    const volunteerSection = findSectionByTitle('volunteer');
+                    if (volunteerSection) {
+                      scrollToSection(volunteerSection);
+                    }
                   }}
                   >{getTranslation(currentLanguage, 'volunteer')}</h4>
                   <div

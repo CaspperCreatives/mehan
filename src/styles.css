@@ -13,6 +13,38 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Section highlighting for sidebar interaction */
+.hover-section {
+  background: linear-gradient(135deg, rgba(11, 102, 194, 0.1) 0%, rgba(11, 102, 194, 0.05) 100%) !important;
+  border: 2px solid rgba(11, 102, 194, 0.3) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 20px rgba(11, 102, 194, 0.2) !important;
+  transition: all 0.3s ease-in-out !important;
+  position: relative !important;
+}
+
+.hover-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(11, 102, 194, 0.1) 50%, transparent 70%);
+  animation: shimmer 2s infinite;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Global font settings */
 * {
   font-family: 'Tajawal', -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
