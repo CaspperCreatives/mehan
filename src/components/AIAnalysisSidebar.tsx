@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AIAnalysisResult } from '../utils/aiAnalyzer';
 import { Icon, IconNames, getIconNameFromSection } from './Icon';
 import { useLanguage, getTranslation, Language } from '../utils/translations';
@@ -10,6 +10,7 @@ import { RefreshLimiter } from '../utils/refreshLimiter';
 import { GeneratedContentBox } from './GeneratedContentBox';
 import { Tooltip } from './Tooltip';
 import { getProfileKeyForSection } from '../utils/sectionDataMap';
+import { getOpenAIAPIKey } from '../utils/apiKeys';
 
 interface AIAnalysisSidebarProps {
   analysis: AIAnalysisResult | null;
@@ -337,8 +338,12 @@ ${sectionCriteria}
 
 Please provide an improved version of this section content. Consider the person's skills and work experience when generating the content to make it more relevant and contextual. Focus on making the content more professional, engaging, and optimized for LinkedIn while meeting the scoring criteria above. Return only the improved content text without any additional formatting or titles.`;
 
-      // Use the same AI pattern as in aiAnalyzer.ts
-      const apiKey = "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";
+      // Get API key from centralized management
+      const apiKey = getOpenAIAPIKey();
+      if (!apiKey) {
+        throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+      }
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -371,8 +376,9 @@ Please provide an improved version of this section content. Consider the person'
       });
     } catch (error) {
       console.error('Error generating content:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate content. Please try again.';
       setGeneratedContent({
-        improvedContent: "Failed to generate content. Please try again."
+        improvedContent: `Error: ${errorMessage}`
       });
     } finally {
       setGeneratedContentLoading(false);

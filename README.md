@@ -1,156 +1,120 @@
-# LinkedIn Profile Scorer Extension
+# LinkedIn Profile Analyzer Extension
 
-A Chrome extension that analyzes LinkedIn profiles and provides comprehensive AI-powered insights to help users optimize their professional presence.
+A Chrome extension that analyzes LinkedIn profiles using AI to provide comprehensive insights, scoring, and optimization recommendations.
 
 ## Features
 
-### Profile Analysis
-- **Real-time Profile Scoring**: Analyzes profile completeness and provides scores for different sections
-- **AI-Powered Insights**: Uses Google's Gemini AI to provide detailed analysis and recommendations
-- **Section-by-Section Breakdown**: Individual scores for LinkedIn URL, Country, Headline, Summary, Experience, Education, Skills, and other sections
+- **AI-Powered Analysis**: Uses OpenAI GPT and Google Gemini for intelligent profile analysis
+- **Comprehensive Scoring**: Detailed scoring system across 20+ profile sections
+- **Smart Recommendations**: Personalized suggestions for profile optimization
+- **Multi-language Support**: English and Arabic interface
+- **Real-time Analysis**: Instant analysis with caching for performance
+- **Content Generation**: AI-powered content improvement suggestions
 
-### AI Analysis Sidebar
-The extension now includes a comprehensive AI analysis sidebar that displays:
+## Setup
 
-#### 📊 Overall Profile Score
-- Visual score display with color-coded indicators (Green: 70+, Yellow: 40-69, Red: <40)
-- Percentage-based scoring system (0-100)
+### 1. Environment Variables
 
-#### 📝 Summary Section
-- AI-generated profile summary highlighting key strengths and areas for improvement
+The extension requires API keys for AI analysis. Create a `.env` file in the root directory:
 
-#### 🔑 Keyword Analysis
-- **Relevant Keywords**: Identifies keywords already present in the profile
-- **Missing Keywords**: Suggests important keywords that could improve visibility
+```bash
+# Copy the example file
+cp env.example .env
 
-#### ✅ Strengths
-- Lists profile strengths with green checkmarks
-- Highlights what's working well
+# Edit the .env file with your actual API keys
+```
 
-#### ⚠️ Areas for Improvement
-- Identifies weaknesses with warning icons
-- Provides specific areas to focus on
+Required environment variables:
+- `OPENAI_API_KEY`: Your OpenAI API key (required for GPT analysis)
+- `GEMINI_API_KEY`: Your Google Gemini API key (fallback for AI analysis)
+- `GOOGLE_AI_API_KEY`: Your Google AI API key (alternative AI provider)
 
-#### 📈 Section Scores
-- Individual scores for each profile section
-- Color-coded indicators (🟢🟡🔴) for quick visual assessment
-- Detailed breakdown of scoring criteria
+### 2. Installation
 
-#### 💡 Top Recommendations
-- Actionable advice to improve profile
-- Prioritized list of most important improvements
+```bash
+# Install dependencies
+npm install
 
-#### 🏭 Industry Insights
-- AI-generated insights about industry positioning
-- Competitive analysis and market positioning
+# Build the extension
+npm run build
 
-#### 🔧 Profile Optimization
-- Specific optimization suggestions
-- Technical improvements for better visibility
+# For development with hot reload
+npm run dev
+```
 
-#### 🎯 Competitive Analysis
-- How the profile compares to industry standards
-- Market positioning insights
+### 3. Load Extension in Chrome
 
-## Installation
-
-1. Clone this repository
-2. Install dependencies: `npm install`
-3. Build the extension: `npm run build`
-4. Load the extension in Chrome:
-   - Go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the project directory
+1. Open Chrome and go to `chrome://extensions/`
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the `dist` folder from this project
 
 ## Usage
 
-1. Navigate to any LinkedIn profile page
-2. The extension will automatically appear as a sidebar on the right side of the page
-3. Click the toggle button (⮜/⮞) to show/hide the sidebar
-4. The AI analysis will automatically start when the profile loads
-5. Review the comprehensive analysis and recommendations
-
-## Technical Details
-
-### AI Integration
-- Uses Google's Gemini 1.5 Flash model for analysis
-- Fallback analysis system when AI is unavailable
-- Comprehensive scoring algorithm for profile assessment
-
-### Scoring System
-The extension uses a sophisticated scoring system that evaluates:
-
-- **LinkedIn URL** (0-5 points): Custom URL presence
-- **Country** (0-5 points): Location information
-- **Headline** (0-20 points): Professional headline quality and length
-- **Summary** (0-20 points): About section completeness and content
-- **Experience** (0-20 points): Work history and descriptions
-- **Education** (0-10 points): Educational background
-- **Skills** (0-15 points): Skill endorsements and relevance
-- **Other Sections** (0-5 points): Publications, languages, certifications, awards, volunteering
-
-### Color-Coded Indicators
-- 🟢 **Green**: Good score (70-100) - Profile section is well-optimized
-- 🟡 **Yellow**: Medium score (40-69) - Room for improvement
-- 🔴 **Red**: Low score (0-39) - Needs significant attention
+1. Navigate to any LinkedIn profile
+2. Click the extension icon in your browser toolbar
+3. Wait for the AI analysis to complete
+4. Review the comprehensive analysis and recommendations
+5. Use the content generation features to improve your profile
 
 ## Development
 
 ### Project Structure
+
 ```
 src/
-├── components/
-│   ├── AIAnalysisSidebar.tsx    # New AI analysis sidebar component
-│   ├── LinkedInProfileViewer.tsx # Main profile viewer
-│   └── AIAnalysis.tsx           # Original AI analysis component
-├── utils/
-│   ├── hooks/
-│   │   └── useLinkedInProfile.ts # Profile data extraction hook
-│   ├── aiAnalyzer.ts            # AI analysis logic
-│   └── scoreCalculator.ts       # Profile scoring algorithm
-├── content.tsx                  # Extension entry point
-└── styles.css                   # Styling for all components
+├── components/          # React components
+├── utils/              # Utility functions
+│   ├── aiAnalyzer.ts   # AI analysis logic
+│   ├── apiKeys.ts      # API key management
+│   └── translations.ts # Multi-language support
+├── types/              # TypeScript type definitions
+└── assets/             # Static assets
 ```
 
-### Key Components
+### Key Files
 
-#### AIAnalysisSidebar
-- Displays comprehensive AI analysis results
-- Color-coded scoring indicators
-- Responsive design for sidebar integration
-- Loading and error states
+- `src/utils/aiAnalyzer.ts`: Main AI analysis engine
+- `src/utils/apiKeys.ts`: Centralized API key management
+- `src/components/AIAnalysisSidebar.tsx`: Main UI component
+- `manifest.json`: Extension configuration
 
-#### useLinkedInProfile Hook
-- Extracts profile data from LinkedIn pages
-- Manages AI analysis state
-- Handles loading and error states
-- Returns both profile data and AI analysis results
+### Environment Variables
 
-### Building and Testing
-```bash
-# Development build
-npm run dev
+The extension uses environment variables for API key management. Make sure to:
 
-# Production build
-npm run build
+1. Create a `.env` file based on `env.example`
+2. Add your actual API keys to the `.env` file
+3. Never commit API keys to version control
+4. Use the centralized `apiKeys.ts` utility for all API key access
 
-# Watch mode for development
-npm run watch
-```
+### API Key Security
+
+- API keys are stored in environment variables
+- The `apiKeys.ts` file provides centralized access
+- Hardcoded keys have been removed for security
+- Proper error handling for missing keys
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Key Errors**: Ensure your `.env` file is properly configured
+2. **Analysis Failures**: Check your API key quotas and limits
+3. **Extension Not Loading**: Verify the `dist` folder exists and is properly built
+
+### Debug Mode
+
+Enable debug mode by setting `DEBUG=true` in your environment variables.
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Add tests if applicable
 5. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues and feature requests, please create an issue in the GitHub repository. 
+MIT License - see LICENSE file for details. 

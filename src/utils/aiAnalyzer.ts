@@ -1,28 +1,29 @@
+import { getOpenAIAPIKey, getGeminiAPIKey } from './apiKeys';
+
 /**
- * Retrieves the OpenAI API key from environment variables or falls back to a hardcoded key
+ * Retrieves the OpenAI API key from environment variables
  * @returns {string} The OpenAI API key
  */
 const getOpenAIKey = (): string => {
-  // Try to get from environment variable first, then fallback to hardcoded
-  // Handle both Node.js and browser environments
+  // Try to get from environment variable first
   if (typeof process !== 'undefined' && process.env && process.env.OPENAI_API_KEY) {
     return process.env.OPENAI_API_KEY;
   }
-  // Fallback to hardcoded key for browser environment
-  return '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';
+  // Return empty string if not available - will be handled by error handling
+  return '';
 };
 
 /**
- * Retrieves the Gemini API key from environment variables or falls back to a hardcoded key
+ * Retrieves the Gemini API key from environment variables
  * @returns {string} The Gemini API key
  */
 const getGeminiKey = (): string => {
-  // Try to get from environment variable first, then fallback to hardcoded
+  // Try to get from environment variable first
   if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
     return process.env.GEMINI_API_KEY;
   }
-  // Fallback to hardcoded key for browser environment
-  return 'AIzaSyC1FQ3AtsUUsYkAUAJNp1LcpJ-aNQECEU0';
+  // Return empty string if not available - will be handled by error handling
+  return '';
 };
 
 
@@ -983,6 +984,10 @@ export class AIProfileAnalyzer {
    * @throws {Error} When the API request fails
    */
   private async callOpenAI(prompt: string): Promise<string> {
+    if (!this.openAIKey) {
+      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -1017,6 +1022,10 @@ export class AIProfileAnalyzer {
    * @throws {Error} When the API request fails
    */
   private async callGemini(prompt: string): Promise<string> {
+    if (!this.geminiKey) {
+      throw new Error('Gemini API key not configured. Please set GEMINI_API_KEY in your environment variables.');
+    }
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.geminiKey}`, {
       method: 'POST',
       headers: {

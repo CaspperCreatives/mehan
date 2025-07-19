@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
+require('dotenv').config();
 
 module.exports = {
   entry: {
@@ -82,7 +83,9 @@ module.exports = {
     // Define process.env for browser environment
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({
-        GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || 'AIzaSyCCpI6pKB5tk7FqW8F2k5iikLBGcedT0RE'
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+        GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || ''
       })
     }),
   ],
