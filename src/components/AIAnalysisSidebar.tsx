@@ -338,7 +338,7 @@ ${sectionCriteria}
 Please provide an improved version of this section content. Consider the person's skills and work experience when generating the content to make it more relevant and contextual. Focus on making the content more professional, engaging, and optimized for LinkedIn while meeting the scoring criteria above. Return only the improved content text without any additional formatting or titles.`;
 
       // Use the same AI pattern as in aiAnalyzer.ts
-      const apiKey = "My API Key";
+      const apiKey = "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";
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
