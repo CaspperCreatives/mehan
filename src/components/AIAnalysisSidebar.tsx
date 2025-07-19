@@ -196,7 +196,13 @@ const GaugeSlider: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
-const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, currentLanguage: Language, profile: any }> = ({ sections, analysis, currentLanguage, profile }) => {
+const SectionsSlider: React.FC<{ 
+  sections: any[], 
+  analysis: AIAnalysisResult, 
+  currentLanguage: Language, 
+  profile: any,
+  generatedData?: any // Add new prop for generated data from buildAnalysisPrompt
+}> = ({ sections, analysis, currentLanguage, profile, generatedData }) => {
   
   const titleMap: { [key: string]: string } = {
     'linkedinurl': getTranslation(currentLanguage, 'url'),
@@ -316,9 +322,15 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
     setGeneratedContent(null);
     
     try {
-      // Get skills and experience data for context
-      const skillsData = profile?.skills?.content || '';
-      const experienceData = profile?.experience?.content || '';
+      // Use generated data if available, otherwise fall back to original profile data
+      const dataSource = generatedData || profile;
+      
+      // Get skills and experience data for context from the appropriate source
+      // Handle both array and object formats
+      const skillsData = dataSource?.skills?.content || 
+                        (Array.isArray(dataSource?.skills) ? dataSource?.skills : '') || '';
+      const experienceData = dataSource?.experience?.content || 
+                           (Array.isArray(dataSource?.experience) ? dataSource?.experience : '') || '';
       
       // Get scoring criteria for this section to help AI generate content that maximizes score
       const sectionCriteria = getScoringCriteriaForSection(sectionTitle);
@@ -521,7 +533,26 @@ Please provide an improved version of this section content. Consider the person'
     
     const sectionTitle = selectedSection.title.toLowerCase();
     const profileKey = getProfileKeyForSection(sectionTitle);
-    const originalData = profileKey ? profile[profileKey] : null;
+    
+    // Use generated data if available, otherwise fall back to original profile data
+    const dataSource = generatedData || profile;
+    let originalData = null;
+    
+    if (profileKey) {
+      // Handle different data structures
+      if (dataSource[profileKey]) {
+        if (typeof dataSource[profileKey] === 'object' && dataSource[profileKey].content) {
+          // Original structure: { content: string }
+          originalData = dataSource[profileKey];
+        } else if (Array.isArray(dataSource[profileKey])) {
+          // New structure: array of objects
+          originalData = { content: JSON.stringify(dataSource[profileKey], null, 2) };
+        } else {
+          // Fallback
+          originalData = { content: String(dataSource[profileKey]) };
+        }
+      }
+    }
     
     generateContentForSection(sectionTitle, originalData);
     
@@ -939,7 +970,7 @@ Please provide an improved version of this section content. Consider the person'
                 generatedContentLoading={generatedContentLoading}
                 generatedContent={generatedContent}
                 selectedSection={selectedSection}
-                profile={profile}
+                profile={generatedData || profile} // Use generated data if available
                 onClose={handleCloseGeneratedContent}
               />
             )}
@@ -1890,7 +1921,13 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, 
       <div className="white-card">
         <div className="white-card-header">
 
-          <SectionsSlider sections={analysis.scoringBreakdown || []} analysis={analysis} currentLanguage={currentLanguage} profile={profile} />
+          <SectionsSlider 
+            sections={analysis.scoringBreakdown || []} 
+            analysis={analysis} 
+            currentLanguage={currentLanguage} 
+            profile={profile}
+            generatedData={analysis} // Pass the analysis result as generated data
+          />
 
           <div className='section-cards-holder'>
             <SectionCard title={getTranslation(currentLanguage, 'summary')}>

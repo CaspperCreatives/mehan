@@ -19,7 +19,9 @@ export const sectionDataMap: { [key: string]: string } = {
   'organizations': 'organizations',
   'featured': 'featured',
   'contactinfo': 'contactInfo',
-  'headline': 'headline'
+  'headline': 'headline',
+  'causes': 'causes',
+  'courses': 'courses'
 };
 
 /**

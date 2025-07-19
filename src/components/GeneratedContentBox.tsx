@@ -123,7 +123,116 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
             {(() => {
               const sectionTitle = selectedSection.title.toLowerCase();
               const profileKey = getProfileKeyForSection(sectionTitle);
-              const originalData = profileKey ? profile[profileKey] : null;
+              let originalData = null;
+              
+              if (profileKey && profile[profileKey]) {
+                if (typeof profile[profileKey] === 'object' && profile[profileKey].content) {
+                  // Original structure: { content: string }
+                  originalData = profile[profileKey];
+                } else if (Array.isArray(profile[profileKey])) {
+                  // New structure: array of objects - format it nicely
+                  const data = profile[profileKey];
+                  if (sectionTitle === 'experiences' || sectionTitle === 'experience') {
+                    // Format experience data
+                    originalData = { 
+                      content: data.map((exp: any, index: number) => 
+                        `${index + 1}. ${exp.title || 'Unknown Position'}\n` +
+                        `   Company: ${exp.company || 'Unknown Company'}\n` +
+                        `   Role: ${exp.role || 'Unknown Role'}\n` +
+                        `   Duration: ${exp.duration || 'Unknown Duration'}\n` +
+                        `   Length: ${exp.length || 'Unknown Length'}\n` +
+                        `   Description: ${exp.description || 'No description provided'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'education') {
+                    // Format education data
+                    originalData = { 
+                      content: data.map((edu: any, index: number) => 
+                        `${index + 1}. ${edu.school || 'Unknown School'}\n` +
+                        `   Degree: ${edu.degree || 'Unknown Degree'}\n` +
+                        `   Field: ${edu.field || 'Unknown Field'}\n` +
+                        `   Duration: ${edu.duration || 'Unknown Duration'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'skills') {
+                    // Format skills data
+                    originalData = { 
+                      content: data.map((skill: any, index: number) => 
+                        `${index + 1}. ${skill.name || 'Unknown Skill'} (${skill.endorsements || 0} endorsements)`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'projects') {
+                    // Format projects data
+                    originalData = { 
+                      content: data.map((project: any, index: number) => 
+                        `${index + 1}. ${project.title || 'Unknown Project'}\n` +
+                        `   Description: ${project.description || 'No description provided'}\n` +
+                        `   URL: ${project.url || 'No URL provided'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'recommendations') {
+                    // Format recommendations data
+                    originalData = { 
+                      content: data.map((rec: any, index: number) => 
+                        `${index + 1}. ${rec.name || 'Unknown Person'}\n` +
+                        `   Title: ${rec.title || 'Unknown Title'}\n` +
+                        `   Company: ${rec.company || 'Unknown Company'}\n` +
+                        `   Content: ${rec.content || 'No content provided'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'publications') {
+                    // Format publications data
+                    originalData = { 
+                      content: data.map((pub: any, index: number) => 
+                        `${index + 1}. ${pub.title || 'Unknown Publication'}\n` +
+                        `   Description: ${pub.description || 'No description provided'}\n` +
+                        `   URL: ${pub.url || 'No URL provided'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'certifications' || sectionTitle === 'certificates') {
+                    // Format certifications data
+                    originalData = { 
+                      content: data.map((cert: any, index: number) => 
+                        `${index + 1}. ${cert.name || 'Unknown Certification'}\n` +
+                        `   Issuer: ${cert.issuer || 'Unknown Issuer'}\n` +
+                        `   Date: ${cert.date || 'Unknown Date'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'languages') {
+                    // Format languages data
+                    originalData = { 
+                      content: data.map((lang: any, index: number) => 
+                        `${index + 1}. ${lang.name || 'Unknown Language'} (${lang.proficiency || 'Unknown Proficiency'})`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'volunteering') {
+                    // Format volunteering data
+                    originalData = { 
+                      content: data.map((vol: any, index: number) => 
+                        `${index + 1}. ${vol.title || 'Unknown Position'}\n` +
+                        `   Organization: ${vol.organization || 'Unknown Organization'}\n` +
+                        `   Description: ${vol.description || 'No description provided'}\n` +
+                        `   Duration: ${vol.duration || 'Unknown Duration'}\n`
+                      ).join('\n')
+                    };
+                  } else if (sectionTitle === 'honorsawards') {
+                    // Format honors and awards data
+                    originalData = { 
+                      content: data.map((award: any, index: number) => 
+                        `${index + 1}. ${award.title || 'Unknown Award'}\n` +
+                        `   Description: ${award.description || 'No description provided'}\n` +
+                        `   Date: ${award.date || 'Unknown Date'}\n`
+                      ).join('\n')
+                    };
+                  } else {
+                    // Fallback for other array data
+                    originalData = { content: JSON.stringify(profile[profileKey], null, 2) };
+                  }
+                } else {
+                  // Fallback
+                  originalData = { content: String(profile[profileKey]) };
+                }
+              }
               
               return originalData?.content || 'No content available for this section';
             })()}

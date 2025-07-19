@@ -487,14 +487,27 @@ export class AIProfileAnalyzer {
 
   private processPublicationsCriteria(criteria: ScoringCriteria, profileData: any, maxScore: number) {
     if (criteria.criteria === "length") {
-      // Handle both AI response format (publications as number) and original format
-      const publicationsCount = typeof profileData.publications === 'number' ? profileData.publications : 
-                               parseInt(profileData.publications) || 0;
+      // Handle different data formats: array, number, or string
+      let publicationsCount = 0;
+      
+      if (Array.isArray(profileData.publications)) {
+        // New structure: array of publication objects
+        publicationsCount = profileData.publications.length;
+      } else if (typeof profileData.publications === 'number') {
+        // AI response format: number
+        publicationsCount = profileData.publications;
+      } else if (typeof profileData.publications === 'string') {
+        // Original format: string that needs parsing
+        publicationsCount = parseInt(profileData.publications) || 0;
+      } else if (profileData.publicationsCount) {
+        // New structure with count field
+        publicationsCount = profileData.publicationsCount;
+      }
+      
       const minPublications = criteria.calculate?.min || 1;
       const score = publicationsCount >= minPublications ? maxScore : Math.round((publicationsCount / minPublications) * maxScore);
       
       // Get current language and translations
-      // const language = document.documentElement.lang === 'ar' ? 'ar' : 'en';
       const { getTranslation } = require('./translations');
       const publicationsText = getTranslation(this.language, 'publications');
       
@@ -510,9 +523,23 @@ export class AIProfileAnalyzer {
 
   private processLanguagesCriteria(criteria: ScoringCriteria, profileData: any, maxScore: number) {
     if (criteria.criteria === "length") {
-      // Handle both AI response format (languages as number) and original format
-      const languagesCount = typeof profileData.languages === 'number' ? profileData.languages : 
-                            parseInt(profileData.languages) || 0;
+      // Handle different data formats: array, number, or string
+      let languagesCount = 0;
+      
+      if (Array.isArray(profileData.languages)) {
+        // New structure: array of language objects
+        languagesCount = profileData.languages.length;
+      } else if (typeof profileData.languages === 'number') {
+        // AI response format: number
+        languagesCount = profileData.languages;
+      } else if (typeof profileData.languages === 'string') {
+        // Original format: string that needs parsing
+        languagesCount = parseInt(profileData.languages) || 0;
+      } else if (profileData.languagesCount) {
+        // New structure with count field
+        languagesCount = profileData.languagesCount;
+      }
+      
       const minLanguages = criteria.calculate?.min || 1;
       const score = languagesCount >= minLanguages ? maxScore : Math.round((languagesCount / minLanguages) * maxScore);
 
@@ -531,14 +558,30 @@ export class AIProfileAnalyzer {
 
   private processCertificatesCriteria(criteria: ScoringCriteria, profileData: any, maxScore: number) {
     if (criteria.criteria === "length") {
-      // Handle both AI response format (certificates as number) and original format
-      const certificatesCount = typeof profileData.certificates === 'number' ? profileData.certificates : 
-                               parseInt(profileData.certificates) || 0;
+      // Handle different data formats: array, number, or string
+      let certificatesCount = 0;
+      
+      if (Array.isArray(profileData.certifications)) {
+        // New structure: array of certification objects
+        certificatesCount = profileData.certifications.length;
+      } else if (Array.isArray(profileData.certificates)) {
+        // Alternative array structure
+        certificatesCount = profileData.certificates.length;
+      } else if (typeof profileData.certificates === 'number') {
+        // AI response format: number
+        certificatesCount = profileData.certificates;
+      } else if (typeof profileData.certificates === 'string') {
+        // Original format: string that needs parsing
+        certificatesCount = parseInt(profileData.certificates) || 0;
+      } else if (profileData.certificationsCount) {
+        // New structure with count field
+        certificatesCount = profileData.certificationsCount;
+      }
+      
       const minCertificates = criteria.calculate?.min || 1;
       const score = certificatesCount >= minCertificates ? maxScore : Math.round((certificatesCount / minCertificates) * maxScore);
       
       // Get current language and translations
-      // const language = document.documentElement.lang === 'ar' ? 'ar' : 'en';
       const { getTranslation } = require('./translations');
       const certificatesText = getTranslation(this.language, 'certificates');
       
@@ -773,12 +816,27 @@ export class AIProfileAnalyzer {
 
   private processRecommendationsCriteria(criteria: ScoringCriteria, profileData: any, maxScore: number) {
     if (criteria.criteria === "length") {
-      // Handle both AI response format (recommendationsCount as number) and original format (recommendations as object with content)
-      const recommendationsCount = typeof profileData.recommendationsCount === 'number' ? profileData.recommendationsCount : 
-                                  (profileData.recommendations?.content ? 1 : 0);
+      // Handle different data formats: array, number, or string
+      let recommendationsCount = 0;
+      
+      if (Array.isArray(profileData.recommendations)) {
+        // New structure: array of recommendation objects
+        recommendationsCount = profileData.recommendations.length;
+      } else if (typeof profileData.recommendationsCount === 'number') {
+        // New structure with count field
+        recommendationsCount = profileData.recommendationsCount;
+      } else if (typeof profileData.recommendations === 'number') {
+        // AI response format: number
+        recommendationsCount = profileData.recommendations;
+      } else if (typeof profileData.recommendations === 'string') {
+        // Original format: string that needs parsing
+        recommendationsCount = parseInt(profileData.recommendations) || 0;
+      }
+      
       const minRecommendations = criteria.calculate?.min || 1;
       const score = recommendationsCount >= minRecommendations ? maxScore : Math.round((recommendationsCount / minRecommendations) * maxScore);
       
+      // Get current language and translations
       const { getTranslation } = require('./translations');
       const recommendationsText = getTranslation(this.language, 'recommendations');
       
@@ -1072,20 +1130,14 @@ export class AIProfileAnalyzer {
         "headline": string,
         "profileImageTitle": string,
         "location": string,
-        "connections": number ,
-        "followers": number ,
-        "about": string,
+        "connections": number,
+        "followers": number,
+        "about": {
+            "content": string
+        },
         "aboutLength": number,
         "openToWork": boolean,
-        "certificates": number,
-        "volunteering": number,
-        "languages": number,
         "name": string,
-        "testScores": string,
-        "patents": number,
-        "causes": number,
-        "organizations": number,
-        "topSkills": ["skill1", "skill2", ...],
         "experience": [
             {
             "title": string,
@@ -1105,77 +1157,166 @@ export class AIProfileAnalyzer {
             "duration": string
             }
         ],
-      "educationCount": number,
+        "educationCount": number,
         "projects": [
           {
           "title": string,
           "description": string,
           "url": string
           }
-      ],
-      "projectsCount": number,
-
-      "skills": [
-          {
-          "name": string,
-          "endorsements": number
-          }
-      ],
-      "skillsCount": number,
-
-      "recommendationsCount": number,
-
-      "publications": number,
-      "courses": number,
-      "honorsAwards": number,
-
-      "overallScore": number (1-100),
-      "strengths": ["strength1", "strength2", ...],
-      "weaknesses": ["weakness1", "weakness2", ...],
-      "analysis_recommendations":{
-        "summary": ["recommendation1", "recommendation2", ...],
-        "skills": ["recommendation1", "recommendation2", ...],
-        "experience": ["recommendation1", "recommendation2", ...],
-        "projects": ["recommendation1", "recommendation2", ...],
-        "education": ["recommendation1", "recommendation2", ...],
-        "recommendations": ["recommendation1", "recommendation2", ...],
-        "publications": ["recommendation1", "recommendation2", ...],
-        "courses": ["recommendation1", "recommendation2", ...],
-        "honorsAwards": ["recommendation1", "recommendation2", ...],
-        "languages": ["recommendation1", "recommendation2", ...],
-        "certificates": ["recommendation1", "recommendation2", ...],
-        "volunteer": ["recommendation1", "recommendation2", ...],
-        "linkedinurl": ["recommendation1", "recommendation2", ...],
-        "headline": ["recommendation1", "recommendation2", ...],
-        "country": ["recommendation1", "recommendation2", ...],
-        "featured": number,
-        "connections": ["recommendation1", "recommendation2", ...],
-        "followers": ["recommendation1", "recommendation2", ...],
-        "openToWork": ["recommendation1", "recommendation2", ...],
-        "experiences": ["recommendation1", "recommendation2", ...],
-      },
-      "industryInsights": "string",
-      "profileOptimization": ["optimization1", "optimization2", ...],
-      "keywordAnalysis": {
-          "relevantKeywords": ["keyword1", "keyword2", ...],
-          "missingKeywords": ["keyword1", "keyword2", ...]
-      },
-      "competitiveAnalysis": "string",
-      "summary": "string",
-      "scoringBreakdown": [
-          {
-              "title": "string",
-              "score": number,
-              "maxPossiblePoints": number,
-              "recommendations": ["recommendation1", "recommendation2", ...],
-              "criteria": [
-                  {
-                      "title": "string",
-                      "point": number
-                  }
-              ]
-          }
-      ],
+        ],
+        "projectsCount": number,
+        "skills": [
+            {
+            "name": string,
+            "endorsements": number
+            }
+        ],
+        "skillsCount": number,
+        "recommendations": [
+            {
+            "name": string,
+            "title": string,
+            "company": string,
+            "content": string
+            }
+        ],
+        "recommendationsCount": number,
+        "publications": [
+            {
+            "title": string,
+            "description": string,
+            "url": string
+            }
+        ],
+        "publicationsCount": number,
+        "courses": [
+            {
+            "title": string,
+            "description": string,
+            "url": string
+            }
+        ],
+        "coursesCount": number,
+        "honorsAwards": [
+            {
+            "title": string,
+            "description": string,
+            "date": string
+            }
+        ],
+        "honorsAwardsCount": number,
+        "languages": [
+            {
+            "name": string,
+            "proficiency": string
+            }
+        ],
+        "languagesCount": number,
+        "certifications": [
+            {
+            "name": string,
+            "issuer": string,
+            "date": string
+            }
+        ],
+        "certificationsCount": number,
+        "volunteering": [
+            {
+            "title": string,
+            "organization": string,
+            "description": string,
+            "duration": string
+            }
+        ],
+        "volunteeringCount": number,
+        "patents": [
+            {
+            "title": string,
+            "description": string,
+            "date": string
+            }
+        ],
+        "patentsCount": number,
+        "testScores": [
+            {
+            "test": string,
+            "score": string,
+            "date": string
+            }
+        ],
+        "testScoresCount": number,
+        "causes": [
+            {
+            "name": string,
+            "description": string
+            }
+        ],
+        "causesCount": number,
+        "organizations": [
+            {
+            "name": string,
+            "role": string,
+            "description": string
+            }
+        ],
+        "organizationsCount": number,
+        "featured": [
+            {
+            "title": string,
+            "description": string,
+            "url": string
+            }
+        ],
+        "featuredCount": number,
+        "topSkills": ["skill1", "skill2", ...],
+        "overallScore": number (1-100),
+        "strengths": ["strength1", "strength2", ...],
+        "weaknesses": ["weakness1", "weakness2", ...],
+        "analysis_recommendations":{
+          "summary": ["recommendation1", "recommendation2", ...],
+          "skills": ["recommendation1", "recommendation2", ...],
+          "experience": ["recommendation1", "recommendation2", ...],
+          "projects": ["recommendation1", "recommendation2", ...],
+          "education": ["recommendation1", "recommendation2", ...],
+          "recommendations": ["recommendation1", "recommendation2", ...],
+          "publications": ["recommendation1", "recommendation2", ...],
+          "courses": ["recommendation1", "recommendation2", ...],
+          "honorsawards": ["recommendation1", "recommendation2", ...],
+          "languages": ["recommendation1", "recommendation2", ...],
+          "certificates": ["recommendation1", "recommendation2", ...],
+          "volunteer": ["recommendation1", "recommendation2", ...],
+          "linkedinurl": ["recommendation1", "recommendation2", ...],
+          "headline": ["recommendation1", "recommendation2", ...],
+          "country": ["recommendation1", "recommendation2", ...],
+          "featured": ["recommendation1", "recommendation2", ...],
+          "connections": ["recommendation1", "recommendation2", ...],
+          "followers": ["recommendation1", "recommendation2", ...],
+          "openToWork": ["recommendation1", "recommendation2", ...],
+          "experiences": ["recommendation1", "recommendation2", ...],
+        },
+        "industryInsights": "string",
+        "profileOptimization": ["optimization1", "optimization2", ...],
+        "keywordAnalysis": {
+            "relevantKeywords": ["keyword1", "keyword2", ...],
+            "missingKeywords": ["keyword1", "keyword2", ...]
+        },
+        "competitiveAnalysis": "string",
+        "summary": "string",
+        "scoringBreakdown": [
+            {
+                "title": "string",
+                "score": number,
+                "maxPossiblePoints": number,
+                "recommendations": ["recommendation1", "recommendation2", ...],
+                "criteria": [
+                    {
+                        "title": "string",
+                        "point": number
+                    }
+                ]
+            }
+        ]
     }
 
     Profile Data:
@@ -1185,19 +1326,20 @@ export class AIProfileAnalyzer {
     - Extract from "${profileData?.education?.content || 'Not provided'}": a detailed array of education entries including school, degree, field of study, duration, and total number of education entries.
     - Extract from "${profileData?.projects?.content || 'Not provided'}": a detailed array of projects including title, description, URL, and total number of projects (projectsCount) the number of all projects usualy is be in text like "show all {number of projects} projects" or عرض ال{number of projects}  مشاريع كلها.
     - Extract from "${profileData?.skills?.content || 'Not provided'}": a detailed array of skills including name, number of endorsements, and total number of skills (skillsCount) the number of all skills usualy is be in text like "show all {number of skills} skills" or عرض ال{number of skills}  مهارات كلها.
-    - Extract from "${profileData?.recommendations?.content || 'Not provided'}": total number of recommendations (recommendationsCount).
-    - Extract from "${profileData?.publications?.content || 'Not provided'}": total number of publications.
-    - Extract from "${profileData?.courses?.content || 'Not provided'}": total number of courses.
-    - Extract from "${profileData?.honorsAwards?.content || 'Not provided'}": total number of honors and awards.
-    - Extract from "${profileData?.languages?.content || 'Not provided'}": a detailed array of languages including name and proficiency level ["language1", "language2", ...].
+    - Extract from "${profileData?.recommendations?.content || 'Not provided'}": a detailed array of recommendations including name, title, company, content, and total number of recommendations (recommendationsCount).
+    - Extract from "${profileData?.publications?.content || 'Not provided'}": a detailed array of publications including title, description, URL, and total number of publications (publicationsCount).
+    - Extract from "${profileData?.courses?.content || 'Not provided'}": a detailed array of courses including title, description, URL, and total number of courses (coursesCount).
+    - Extract from "${profileData?.honorsAwards?.content || 'Not provided'}": a detailed array of honors and awards including title, description, date, and total number of honors and awards (honorsAwardsCount).
+    - Extract from "${profileData?.languages?.content || 'Not provided'}": a detailed array of languages including name, proficiency level, and total number of languages (languagesCount).
     - Extract from "${profileData?.basicInfo?.profilePicture || 'Not provided'}": URL of the profile picture.
     - Extract from "${profileData?.basicInfo?.backgroundImage || 'Not provided'}": URL of the background image.
     - Extract from "${profileData?.basicInfo?.profileImageTitle || 'Not provided'}": whether the profile is marked as open to work (true or false).
-    - Extract from "${profileData?.volunteering?.content || 'Not provided'}": total number of volunteering experiences (volunteering).
-    - Extract from "${profileData?.certificates?.content || 'Not provided'}": total number of certificates (certificates).
-    - Extract from "${profileData?.testScores?.content || 'Not provided'}": total number of test scores (testScores).
-    - Extract from "${profileData?.organizations?.content || 'Not provided'}": total number of organizations (organizations).
-    - Extract from "${profileData?.causes?.content || 'Not provided'}": total number of causes (causes).
+    - Extract from "${profileData?.volunteering?.content || 'Not provided'}": a detailed array of volunteering experiences including title, organization, description, duration, and total number of volunteering experiences (volunteeringCount).
+    - Extract from "${profileData?.certifications?.content || 'Not provided'}": a detailed array of certifications including name, issuer, date, and total number of certifications (certificationsCount).
+    - Extract from "${profileData?.testScores?.content || 'Not provided'}": a detailed array of test scores including test name, score, date, and total number of test scores (testScoresCount).
+    - Extract from "${profileData?.organizations?.content || 'Not provided'}": a detailed array of organizations including name, role, description, and total number of organizations (organizationsCount).
+    - Extract from "${profileData?.causes?.content || 'Not provided'}": a detailed array of causes including name, description, and total number of causes (causesCount).
+    - Extract from "${profileData?.featured?.content || 'Not provided'}": a detailed array of featured items including title, description, URL, and total number of featured items (featuredCount).
 
     according to the all the data provided, return the following (be kind and friendly and encourage the user to improve their profile):
     - summary: "{{first name}}'s {{say something good about the profile}}", {{add a short summary about the profile | 250 words}} 
