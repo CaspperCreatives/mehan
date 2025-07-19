@@ -3,10 +3,13 @@ import { AIAnalysisResult } from '../utils/aiAnalyzer';
 import { Icon, IconNames, getIconNameFromSection } from './Icon';
 import { useLanguage, getTranslation, Language } from '../utils/translations';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faInfoCircle, faRobot } from '@fortawesome/free-solid-svg-icons';
 import gsap from 'gsap';
 import { ExportButtons } from './ExportButtons';
 import { RefreshLimiter } from '../utils/refreshLimiter';
+import { GeneratedContentBox } from './GeneratedContentBox';
+import { Tooltip } from './Tooltip';
+import { getProfileKeyForSection } from '../utils/sectionDataMap';
 
 interface AIAnalysisSidebarProps {
   analysis: AIAnalysisResult | null;
@@ -192,7 +195,7 @@ const GaugeSlider: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
-const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, currentLanguage: Language }> = ({ sections, analysis, currentLanguage }) => {
+const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, currentLanguage: Language, profile: any }> = ({ sections, analysis, currentLanguage, profile }) => {
   
   const titleMap: { [key: string]: string } = {
     'linkedinurl': getTranslation(currentLanguage, 'url'),
@@ -272,6 +275,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
     return null;
   });
 
+  // Add state for showing generated content
+  const [showGeneratedContent, setShowGeneratedContent] = useState(false);
+  const [generatedContentLoading, setGeneratedContentLoading] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Clear generated content when selected section changes
+  useEffect(() => {
+    setShowGeneratedContent(false);
+    setGeneratedContent(null);
+    setGeneratedContentLoading(false);
+  }, [selectedSection]);
+
   // Helper function to find section by title
   const findSectionByTitle = (title: string) => {
     return sections.find(section => {
@@ -287,6 +303,164 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
       
       return sectionTitle === searchTitle;
     });
+  };
+
+  /**
+   * Generate content for a specific section using AI
+   * @param sectionTitle - The title of the section to generate content for
+   * @param originalData - The original data from the profile
+   */
+  const generateContentForSection = async (sectionTitle: string, originalData: any) => {
+    setGeneratedContentLoading(true);
+    setGeneratedContent(null);
+    
+    try {
+      // Get skills and experience data for context
+      const skillsData = profile?.skills?.content || '';
+      const experienceData = profile?.experience?.content || '';
+      
+      // Get scoring criteria for this section to help AI generate content that maximizes score
+      const sectionCriteria = getScoringCriteriaForSection(sectionTitle);
+      
+      // Create a prompt for generating content for the specific section
+      const prompt = `Generate improved content for the LinkedIn profile section "${sectionTitle}". 
+
+Original content:
+${originalData?.content || 'No content available'}
+
+Context from profile:
+Skills: ${skillsData || 'No skills data available'}
+Work Experience: ${experienceData || 'No experience data available'}
+
+Scoring Criteria for this section (aim to meet these requirements for maximum score):
+${sectionCriteria}
+
+Please provide an improved version of this section content. Consider the person's skills and work experience when generating the content to make it more relevant and contextual. Focus on making the content more professional, engaging, and optimized for LinkedIn while meeting the scoring criteria above. Return only the improved content text without any additional formatting or titles.`;
+
+      // Use the same AI pattern as in aiAnalyzer.ts
+      const apiKey = "My API Key";
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+      
+      // Set the generated content directly as the improved content
+      setGeneratedContent({
+        improvedContent: aiResponse.trim()
+      });
+    } catch (error) {
+      console.error('Error generating content:', error);
+      setGeneratedContent({
+        improvedContent: "Failed to generate content. Please try again."
+      });
+    } finally {
+      setGeneratedContentLoading(false);
+    }
+  };
+
+  /**
+   * Get scoring criteria for a specific section to help AI generate content that maximizes score
+   * @param sectionTitle - The section title to get criteria for
+   * @returns {string} Formatted criteria string for the prompt
+   */
+  const getScoringCriteriaForSection = (sectionTitle: string): string => {
+    const criteriaMap: { [key: string]: string } = {
+      'summary': `- Minimum 200 words for maximum score (20 points)
+- Include email contact information (10 points)
+- Make it professional and engaging
+- Include relevant keywords from your industry`,
+      
+      'headline': `- Minimum 10 words for maximum score (10 points)
+- Include relevant keywords (10 points)
+- Make it professional and descriptive
+- Highlight your key expertise`,
+      
+      'experiences': `- Include detailed descriptions for each experience (10 points)
+- Minimum 3 experiences for maximum score (10 points)
+- Make descriptions comprehensive and achievement-focused
+- Include specific metrics and results when possible`,
+      
+      'education': `- Include at least one education entry (10 points)
+- Provide complete information (school, degree, field, duration)
+- Make it relevant to your professional background`,
+      
+      'skills': `- Include at least 3 skills for maximum score (15 points)
+- Focus on relevant professional skills
+- Include both technical and soft skills
+- Prioritize skills that match your experience`,
+      
+      'projects': `- Include at least one project (1 point)
+- Provide detailed descriptions
+- Include project URLs if available
+- Highlight your role and contributions`,
+      
+      'recommendations': `- Include at least one recommendation (1 point)
+- Request recommendations from colleagues and managers
+- Focus on professional relationships`,
+      
+      'publications': `- Include at least one publication (1 point)
+- Academic or industry publications count
+- Include complete publication details`,
+      
+      'languages': `- Include at least one language (1 point)
+- Specify proficiency levels
+- Include both native and learned languages`,
+      
+      'certificates': `- Include at least one certificate (1 point)
+- Professional certifications count
+- Include certification details and dates`,
+      
+      'honorsawards': `- Include at least one honor or award (1 point)
+- Academic, professional, or industry awards
+- Include award details and dates`,
+      
+      'volunteer': `- Include at least one volunteer experience (1 point)
+- Community service or charitable work
+- Include organization and role details`,
+      
+      'patents': `- Include at least one patent (1 point)
+- Technical or innovation patents
+- Include patent details and dates`,
+      
+      'testscores': `- Include at least one test score (1 point)
+- Professional or academic test scores
+- Include test details and scores`,
+      
+      'organizations': `- Include at least one organization membership (1 point)
+- Professional associations or groups
+- Include membership details`,
+      
+      'featured': `- Include at least one featured item (1 point)
+- Articles, posts, or media
+- Include featured content details`,
+      
+      'causes': `- Include at least one cause (1 point)
+- Social or environmental causes
+- Include cause details and involvement`
+    };
+
+    return criteriaMap[sectionTitle.toLowerCase()] || 'Focus on making the content professional, comprehensive, and engaging for LinkedIn.';
   };
 
   /**
@@ -324,6 +498,76 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
     setSelectedSection(section);
     scrollToSection(section);
   }
+
+  const handleGenerateContent = () => {
+    if (!selectedSection || !profile) return;
+    
+    // Hide the section-cards-holder div with smooth transition
+    const sectionCardsHolder = document.querySelector('.section-cards-holder');
+    if (sectionCardsHolder) {
+      (sectionCardsHolder as HTMLElement).style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      (sectionCardsHolder as HTMLElement).style.opacity = '0';
+      (sectionCardsHolder as HTMLElement).style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        (sectionCardsHolder as HTMLElement).style.display = 'none';
+      }, 300);
+    }
+    
+    const sectionTitle = selectedSection.title.toLowerCase();
+    const profileKey = getProfileKeyForSection(sectionTitle);
+    const originalData = profileKey ? profile[profileKey] : null;
+    
+    generateContentForSection(sectionTitle, originalData);
+    
+    // Start animation
+    setIsAnimating(true);
+    setTimeout(() => {
+      setShowGeneratedContent(true);
+      setIsAnimating(false);
+    }, 350); // Wait for section cards to fade out
+  };
+
+  /**
+   * Function to show section cards when closing generated content
+   */
+  const handleCloseGeneratedContent = () => {
+    // Start fade out animation for generated content
+    setIsAnimating(true);
+    setShowGeneratedContent(false);
+    
+    // Show the section-cards-holder div with smooth transition
+    setTimeout(() => {
+      const sectionCardsHolder = document.querySelector('.section-cards-holder');
+      if (sectionCardsHolder) {
+        (sectionCardsHolder as HTMLElement).style.display = '';
+        (sectionCardsHolder as HTMLElement).style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        (sectionCardsHolder as HTMLElement).style.opacity = '0';
+        (sectionCardsHolder as HTMLElement).style.transform = 'translateY(10px)';
+        
+        // Trigger reflow to ensure transition works
+        (sectionCardsHolder as HTMLElement).offsetHeight;
+        
+        // Animate in
+        (sectionCardsHolder as HTMLElement).style.opacity = '1';
+        (sectionCardsHolder as HTMLElement).style.transform = 'translateY(0)';
+      }
+      
+      setIsAnimating(false);
+    }, 200); // Wait for generated content to start fading out
+  };
+
+  /**
+   * Determines if the generate content button should be shown for the current section
+   * @returns {boolean} True if the button should be shown
+   */
+  const shouldShowGenerateButton = (): boolean => {
+    if (!selectedSection) return false;
+    
+    const sectionTitle = selectedSection.title.toLowerCase();
+    const sectionsWithoutGenerate = ['linkedinurl', 'profilepicture', 'backgroundimage'];
+    
+    return !sectionsWithoutGenerate.includes(sectionTitle);
+  };
 
   /**
   function to scroll to the section in the page
@@ -482,21 +726,21 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
                 alt={section.title}
               />
             </span>
-            <span 
-            className='color'
-            style={{
-              color: getScoreColor(section.score || 0, section.maxPossiblePoints)
-            }}
+            <span
+              className='color'
+              style={{
+                color: getScoreColor(section.score || 0, section.maxPossiblePoints)
+              }}
             >{section.score || 0} / {section.maxPossiblePoints || 0}</span>
           </div>
         ))}
 
         {/* Others section - only show if there are others sections */}
         {othersSectionsData.length > 0 && (
-          <div 
-            className={`section-card ${selectedSection && selectedSection.title.toLowerCase() === 'others' ? 'active' : ''}`} 
+          <div
+            className={`section-card ${selectedSection && selectedSection.title.toLowerCase() === 'others' ? 'active' : ''}`}
             onClick={() => {
-              setSelectedSection({title: 'others'});
+              setSelectedSection({ title: 'others' });
               // For "others" section, we'll highlight the first available "others" section
               const firstOthersSection = othersSectionsData[0];
               if (firstOthersSection) {
@@ -505,27 +749,27 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
             }}
           >
             <span className="title"
-            style={{
-              fontSize: '12px',
-              textAlign: 'center',
-              fontWeight: '500',
-              color: '#6b7280'
-            }}
+              style={{
+                fontSize: '12px',
+                textAlign: 'center',
+                fontWeight: '500',
+                color: '#6b7280'
+              }}
             >
               {getTranslation(currentLanguage, 'others')}
             </span>
             <span className='icon'>
-              <Icon 
-                name={'others'} 
+              <Icon
+                name={'others'}
                 size={20}
                 alt={getTranslation(currentLanguage, 'others')}
               />
             </span>
-            <span 
-            className='color'
-            style={{
-              color: getScoreColor(othersTotalScore, othersMaxScore)
-            }}
+            <span
+              className='color'
+              style={{
+                color: getScoreColor(othersTotalScore, othersMaxScore)
+              }}
             >{othersTotalScore} / {othersMaxScore} </span>
 
           </div>
@@ -535,77 +779,118 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
       {/* Main section details */}
       {selectedSection && selectedSection.title.toLowerCase() !== 'others' && (
         <div className="section-card-details"
-        style={{
-         height: 'auto',
-         overflow: 'auto'
-        }}
+          style={{
+            height: 'auto',
+            overflow: 'auto'
+          }}
         >
           <div className='section-card-details-actions'
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '10px 0',
-            borderBottom: '1px solid #e5e7eb',
-            marginBottom: '15px'
-          }}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px',
+              borderBottom: '1px solid #e5e7eb',
+              marginBottom: '15px'
+            }}
           >
-            <button
-              onClick={() => {
-                const sectionTitle = selectedSection.title.toLowerCase();
-                clickEditButton(sectionTitle);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                backgroundColor: '#0B66C2',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#094785'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0B66C2'}
-            >
-              <svg role="img" aria-hidden="false" aria-label="Edit" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" data-supported-dps="24x24" data-test-icon="edit-medium">
-                <use href="#edit-medium" width="24" height="24"></use>
-              </svg>
-              Edit
-            </button>
-            
-            <button
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '40px',
-                height: '40px',
-                backgroundColor: '#f3f4f6',
-                color: '#6b7280',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#e5e7eb';
-                e.currentTarget.style.color = '#374151';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#f3f4f6';
-                e.currentTarget.style.color = '#6b7280';
-              }}
-              title="Generate Content"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2v6m0 0v6m0-6h6m-6 0H6"/>
-              </svg>
-            </button>
+            <Tooltip text={getTranslation(currentLanguage, 'editSection')} position="right">
+
+              <button
+                onClick={() => {
+                  const sectionTitle = selectedSection.title.toLowerCase();
+                  clickEditButton(sectionTitle);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <svg role="img" aria-hidden="false" aria-label="Edit" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" data-supported-dps="24x24" data-test-icon="edit-medium" style={{ color: '#6b7280' }}>
+                  <use href="#edit-medium" width="24" height="24"></use>
+                </svg>
+              </button>
+            </Tooltip>
+
+
+            {shouldShowGenerateButton() && (
+              <Tooltip text={getTranslation(currentLanguage, 'generateContent')} position="left">
+
+                <button
+                  onClick={handleGenerateContent}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '40px',
+                    height: '40px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                    position: 'relative'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ width: '30px', height: '30px' }}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M15.0614 9.67972L16.4756 11.0939L17.8787 9.69083L16.4645 8.27662L15.0614 9.67972ZM16.4645 6.1553L20 9.69083L8.6863 21.0045L5.15076 17.469L16.4645 6.1553Z"
+                      fill="#6b7280"
+                    />
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M11.364 5.06066L9.59619 6.82843L8.53553 5.76777L10.3033 4L11.364 5.06066ZM6.76778 6.82842L5 5.06067L6.06066 4L7.82843 5.76776L6.76778 6.82842ZM10.3033 10.364L8.53553 8.5962L9.59619 7.53554L11.364 9.3033L10.3033 10.364ZM7.82843 8.5962L6.06066 10.364L5 9.3033L6.76777 7.53554L7.82843 8.5962Z"
+                      fill="#6b7280"
+                    />
+                  </svg>
+                </button>
+              </Tooltip>
+            )}
           </div>
           <div className="section-card-details-content"
           style={{
@@ -639,6 +924,19 @@ const SectionsSlider: React.FC<{ sections: any[], analysis: AIAnalysisResult, cu
               className='color'
               >{selectedSection.score || 0} / {selectedSection.maxPossiblePoints || 0}</p>
             </div>
+
+            {/* Generated Content Box */}
+            {showGeneratedContent && (
+              <GeneratedContentBox
+                showGeneratedContent={showGeneratedContent}
+                isAnimating={isAnimating}
+                generatedContentLoading={generatedContentLoading}
+                generatedContent={generatedContent}
+                selectedSection={selectedSection}
+                profile={profile}
+                onClose={handleCloseGeneratedContent}
+              />
+            )}
 
             <div className="criteria"
             style={{
@@ -1507,7 +1805,9 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, 
             onMouseEnter={() => setShowLimitInfo(true)}
             onMouseLeave={() => setShowLimitInfo(false)}
           >
-            <FontAwesomeIcon icon={faInfoCircle} />
+            <Tooltip text={getTranslation(currentLanguage, 'refreshLimitInfo')}>
+              <FontAwesomeIcon icon={faInfoCircle} />
+            </Tooltip>
           </div>
           
           {/* Limit info popup */}
@@ -1584,78 +1884,79 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, 
       <div className="white-card">
         <div className="white-card-header">
 
-            <SectionsSlider sections={analysis.scoringBreakdown || []} analysis={analysis} currentLanguage={currentLanguage} />
+          <SectionsSlider sections={analysis.scoringBreakdown || []} analysis={analysis} currentLanguage={currentLanguage} profile={profile} />
 
+          <div className='section-cards-holder'>
             <SectionCard title={getTranslation(currentLanguage, 'summary')}>
-            <p >{analysis.summary || getTranslation(currentLanguage, 'noSummaryAvailable')}</p>
+              <p >{analysis.summary || getTranslation(currentLanguage, 'noSummaryAvailable')}</p>
             </SectionCard>
 
-        {/* Keywords */}
-        <SectionCard title={getTranslation(currentLanguage, 'keywordAnalysis')}>
-            <div style={{ marginBottom: '16px' }} >
-            <h4 >- {getTranslation(currentLanguage, 'relevantKeywords')}</h4>
-            <div
-                style={{
+            {/* Keywords */}
+            <SectionCard title={getTranslation(currentLanguage, 'keywordAnalysis')}>
+              <div style={{ marginBottom: '16px' }} >
+                <h4 >- {getTranslation(currentLanguage, 'relevantKeywords')}</h4>
+                <div
+                  style={{
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '10px',
                     margin: '10px 0'
-                }}
-            >
-                {(analysis.keywordAnalysis?.relevantKeywords || []).map((keyword, index) => (
-                <KeywordTag key={index} keyword={keyword} type="relevant" />
-                ))}
-            </div>
-            </div>
-            <div>
-            <h4 >- {getTranslation(currentLanguage, 'missingKeywords')}</h4>
-            <div
-                 style={{
+                  }}
+                >
+                  {(analysis.keywordAnalysis?.relevantKeywords || []).map((keyword, index) => (
+                    <KeywordTag key={index} keyword={keyword} type="relevant" />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h4 >- {getTranslation(currentLanguage, 'missingKeywords')}</h4>
+                <div
+                  style={{
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '10px',
                     margin: '10px 0'
-                }}
-            >
-                {(analysis.keywordAnalysis?.missingKeywords || []).map((keyword, index) => (
-                <KeywordTag key={index} keyword={keyword} type="missing" />
+                  }}
+                >
+                  {(analysis.keywordAnalysis?.missingKeywords || []).map((keyword, index) => (
+                    <KeywordTag key={index} keyword={keyword} type="missing" />
+                  ))}
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Strengths */}
+            <SectionCard title={getTranslation(currentLanguage, 'strengths')}>
+              <ul >
+                {(analysis.strengths || []).map((strength, index) => (
+                  <li key={index}>
+                    <span style={{ color: '#22c55e', marginRight: '8px' }}>✓</span>
+                    {strength}
+                  </li>
                 ))}
-            </div>
-            </div>
-        </SectionCard>
+              </ul>
+            </SectionCard>
 
-        {/* Strengths */}
-        <SectionCard title={getTranslation(currentLanguage, 'strengths')}>
-            <ul >
-            {(analysis.strengths || []).map((strength, index) => (
-                <li key={index}>
-                <span style={{ color: '#22c55e', marginRight: '8px' }}>✓</span>
-                {strength}
-                </li>
-            ))}
-            </ul>
-        </SectionCard>
-
-        {/* Weaknesses */}
-        <SectionCard title={getTranslation(currentLanguage, 'areasForImprovement')}>
-            <ul >
-            {(analysis.weaknesses || []).map((weakness, index) => (
-                <li key={index}>
-                <span style={{ color: '#ef4444', marginRight: '8px' }}>⚠</span>
-                {weakness}
-                </li>
-            ))}
-            </ul>
-        </SectionCard>
+            {/* Weaknesses */}
+            <SectionCard title={getTranslation(currentLanguage, 'areasForImprovement')}>
+              <ul >
+                {(analysis.weaknesses || []).map((weakness, index) => (
+                  <li key={index}>
+                    <span style={{ color: '#ef4444', marginRight: '8px' }}>⚠</span>
+                    {weakness}
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
 
 
-        {/* Industry Insights */}
-        <SectionCard title={getTranslation(currentLanguage, 'industryInsights')}>
-            <p>{analysis.industryInsights || getTranslation(currentLanguage, 'noIndustryInsightsAvailable')}</p>
-        </SectionCard>
+            {/* Industry Insights */}
+            <SectionCard title={getTranslation(currentLanguage, 'industryInsights')}>
+              <p>{analysis.industryInsights || getTranslation(currentLanguage, 'noIndustryInsightsAvailable')}</p>
+            </SectionCard>
 
-        {/* Profile Optimization */}
-        {/* <SectionCard title="Profile Optimization">
+            {/* Profile Optimization */}
+            {/* <SectionCard title="Profile Optimization">
             <ul>
             {(analysis.profileOptimization || []).slice(0, 3).map((optimization, index) => (
                 <li key={index}>
@@ -1667,9 +1968,10 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({ analysis, 
         </SectionCard>
 
         {/* Competitive Analysis */}
-        <SectionCard title={getTranslation(currentLanguage, 'competitiveAnalysis')}>
-            <p>{analysis.competitiveAnalysis || getTranslation(currentLanguage, 'noCompetitiveAnalysisAvailable')}</p>
-        </SectionCard> 
+            <SectionCard title={getTranslation(currentLanguage, 'competitiveAnalysis')}>
+              <p>{analysis.competitiveAnalysis || getTranslation(currentLanguage, 'noCompetitiveAnalysisAvailable')}</p>
+            </SectionCard>
+          </div>
 
         </div>
       </div>

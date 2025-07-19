@@ -44,6 +44,19 @@ export const useLinkedInProfile = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  /**
+   * Cleans the content by removing the first line (section title)
+   * @param content - The raw content with section title
+   * @returns {string} The cleaned content without the section title
+   */
+  const cleanContent = (content: string): string => {
+    if (!content) return '';
+    
+    const lines = content.split('\n');
+    // Remove the first line (section title) and join the rest
+    return lines.slice(1).join('\n').trim();
+  };
+
   const scrapeProfile = async (forceRefresh: boolean = false) => {
     try {
       // Wait for the page to be fully loaded
@@ -152,115 +165,115 @@ export const useLinkedInProfile = () => {
           if(item.title === 'About' || item.title === 'نبذة عنا') {
               let className = 'about-section'
               item.section.classList.add(className)
-              profileData.about = {content: item.innerText, className: className, title: 'about'}
+              profileData.about = {content: cleanContent(item.innerText), className: className, title: 'about'}
           }
 
           if(item.title === 'Top skills' || item.title === 'أبرز المهارات') {
               let className = 'skills-section'
               item.section.classList.add(className)
-              profileData.skills = {content: item.innerText, className: className, title: 'top-skills'}
+              profileData.skills = {content: cleanContent(item.innerText), className: className, title: 'top-skills'}
           }
   
           if(item.title === 'Experience' || item.title === 'الخبرة') {
               let className = 'experience-section'
               item.section.classList.add(className)
-              profileData.experience = {content: item.innerText, className: className, title: 'experience'}
+              profileData.experience = {content: cleanContent(item.innerText), className: className, title: 'experience'}
           }
   
           if(item.title === 'Education' || item.title === 'التعليم') {
               let className = 'education-section'
               item.section.classList.add(className)
-              profileData.education = {content: item.innerText, className: className, title: 'education'}
+              profileData.education = {content: cleanContent(item.innerText), className: className, title: 'education'}
           }
   
           if(item.title === 'Certifications' || item.title === 'الشهادات') {
               let className = 'certifications-section'
               item.section.classList.add(className)
-              profileData.certifications = {content: item.innerText, className: className, title: 'certifications'}
+              profileData.certifications = {content: cleanContent(item.innerText), className: className, title: 'certifications'}
           }
   
           if(item.title === 'Projects' || item.title === 'المشاريع') {
               let className = 'projects-section'
               item.section.classList.add(className)
-              profileData.projects = {content: item.innerText, className: className, title: 'projects'}
+              profileData.projects = {content: cleanContent(item.innerText), className: className, title: 'projects'}
           }
   
           if(item.title === 'Languages' || item.title === 'اللغات') {
               let className = 'languages-section'
               item.section.classList.add(className)
-              profileData.languages = {content: item.innerText, className: className, title: 'languages'}
+              profileData.languages = {content: cleanContent(item.innerText), className: className, title: 'languages'}
           }
   
           if(item.title === 'Volunteering' || item.title === 'التطوع') {
               let className = 'volunteering-section'
               item.section.classList.add(className)
-              profileData.volunteering = {content: item.innerText, className: className, title: 'volunteering'}
+              profileData.volunteering = {content: cleanContent(item.innerText), className: className, title: 'volunteering'}
           }
   
           if(item.title === 'Accomplishments' || item.title === 'الإنجازات') {
               let className = 'accomplishments-section'
               item.section.classList.add(className)
-              profileData.accomplishments = {content: item.innerText, className: className, title: 'accomplishments'}
+              profileData.accomplishments = {content: cleanContent(item.innerText), className: className, title: 'accomplishments'}
           }
           if(item.title === 'Featured' || item.title === 'المميز') {
               let className = 'featured-section'
               item.section.classList.add(className)
-              profileData.featured = {content: item.innerText, className: className, title: 'featured'}
+              profileData.featured = {content: cleanContent(item.innerText), className: className, title: 'featured'}
           }
           if(item.title === 'Activity' || item.title === 'النشاط') {
               let className = 'activity-section'
               item.section.classList.add(className)
-              profileData.activity = {content: item.innerText, className: className, title: 'activity'}
+              profileData.activity = {content: cleanContent(item.innerText), className: className, title: 'activity'}
           }
           if(item.title === 'Skills' || item.title === 'المهارات') {
               let className = 'skills-section'
               item.section.classList.add(className)
-              profileData.skills = {content: item.innerText, className: className, title: 'skills'}
+              profileData.skills = {content: cleanContent(item.innerText), className: className, title: 'skills'}
           }
           if(item.title === 'Recommendations' || item.title === 'التوصيات') {
               let className = 'recommendations-section'
               item.section.classList.add(className)
-              profileData.recommendations = {content: item.innerText, className: className, title: 'recommendations'}
+              profileData.recommendations = {content: cleanContent(item.innerText), className: className, title: 'recommendations'}
           }
           if(item.title === 'Publications' || item.title === 'المنشورات') {
               let className = 'publications-section'
               item.section.classList.add(className)
-              profileData.publications = {content: item.innerText, className: className, title: 'publications'}
+              profileData.publications = {content: cleanContent(item.innerText), className: className, title: 'publications'}
           }
           if(item.title === 'Courses' || item.title === 'الدورات الدراسية') {
               let className = 'courses-section'
               item.section.classList.add(className)
-              profileData.courses = {content: item.innerText, className: className, title: 'courses'}
+              profileData.courses = {content: cleanContent(item.innerText), className: className, title: 'courses'}
           }
           if(item.title === 'Honors & awards' || item.title === 'تكريمات ومكافآت') {
               let className = 'honors-awards-section'
               item.section.classList.add(className)
-              profileData.honorsAwards = {content: item.innerText, className: className, title: 'honors-awards'}
+              profileData.honorsAwards = {content: cleanContent(item.innerText), className: className, title: 'honors-awards'}
           }
           if(item.title === 'Causes' || item.title === 'القضايا التطوعية') {
               let className = 'causes-section'
               item.section.classList.add(className)
-              profileData.causes = {content: item.innerText, className: className, title: 'causes'}
+              profileData.causes = {content: cleanContent(item.innerText), className: className, title: 'causes'}
           }
           if(item.title === 'Patents' || item.title === 'براءات الاختراع') {
               let className = 'patents-section'
               item.section.classList.add(className)
-              profileData.patents = {content: item.innerText, className: className, title: 'patents'}
+              profileData.patents = {content: cleanContent(item.innerText), className: className, title: 'patents'}
           }
           if(item.title === 'Test scores' || item.title === 'درجات الاختبار') {
               let className = 'test-scores-section'
               item.section.classList.add(className)
-              profileData.testScores = {content: item.innerText, className: className, title: 'test-scores'}
+              profileData.testScores = {content: cleanContent(item.innerText), className: className, title: 'test-scores'}
           }
           if(item.title === 'Organizations' || item.title === 'المنظمات') {
               let className = 'organizations-section'
               item.section.classList.add(className)
-              profileData.organizations = {content: item.innerText, className: className, title: 'organizations'}
+              profileData.organizations = {content: cleanContent(item.innerText), className: className, title: 'organizations'}
           }
           if(item.title === 'Contact info' || item.title === 'معلومات الاتصال') {
               let className = 'contact-info-section'
               item.section.classList.add(className)
-              profileData.contactInfo = {content: item.innerText, className: className, title: 'contact-info'}
+              profileData.contactInfo = {content: cleanContent(item.innerText), className: className, title: 'contact-info'}
           }
         })
         

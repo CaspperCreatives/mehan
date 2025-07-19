@@ -116,6 +116,17 @@ export interface Translations {
   remainingRefreshes: string;
   resetsAt: string;
   dailyLimitReached: string;
+  generateContent: string;
+  editSection: string;
+  refreshLimitInfo: string;
+  
+  // Generated content box
+  generatedContent: string;
+  originalContent: string;
+  copied: string;
+  copyToClipboard: string;
+  generatingContent: string;
+  clickGenerateButton: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -211,7 +222,16 @@ export const translations: Record<Language, Translations> = {
     causes: 'Causes',
     remainingRefreshes: 'Remaining refreshes',
     resetsAt: 'Resets at',
-    dailyLimitReached: 'Daily limit reached'
+    dailyLimitReached: 'Daily limit reached',
+    generateContent: 'Generate Content',
+    editSection: 'Edit Section',
+    refreshLimitInfo: 'Profile refresh is updated every 24 hours',
+    generatedContent: 'Generated Content',
+    originalContent: 'Original Content',
+    copied: 'Copied!',
+    copyToClipboard: 'Copy to Clipboard',
+    generatingContent: 'Generating content...',
+    clickGenerateButton: 'Click to generate content'
   },
   ar: {
     upgradeToPremium: 'ترقية الى برينيوم',
@@ -305,7 +325,16 @@ export const translations: Record<Language, Translations> = {
     causes: 'القضايا التطوعية',
     remainingRefreshes: 'التحديثات المتبقية',
     resetsAt: 'إعادة تعيين في',
-    dailyLimitReached: 'تم الوصول للحد اليومي'
+    dailyLimitReached: 'تم الوصول للحد اليومي',
+    generateContent: 'إنشاء محتوى',
+    editSection: 'تعديل القسم',
+    refreshLimitInfo: 'تحديث الملف الشخصي يتم تحديثه كل 24 ساعة',
+    generatedContent: 'المحتوى المولد',
+    originalContent: 'المحتوى الأصلي',
+    copied: 'تم النسخ!',
+    copyToClipboard: 'نسخ إلى الحافظة',
+    generatingContent: 'جاري إنشاء المحتوى...',
+    clickGenerateButton: 'انقر لإنشاء المحتوى'
   }
 };
 
