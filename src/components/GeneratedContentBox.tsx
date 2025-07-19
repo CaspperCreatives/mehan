@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage, getTranslation } from '../utils/translations';
 import { getProfileKeyForSection } from '../utils/sectionDataMap';
 
@@ -326,31 +326,9 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
             overflowY: 'auto'
           }}>
             {generatedContentLoading ? (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                color: '#6b7280'
-              }}>
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  border: '2px solid #e5e7eb',
-                  borderTop: '2px solid #0B66C2',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }}></div>
-                {getTranslation(currentLanguage, 'generatingContent')}
-              </div>
+              <SkeletonLoader />
             ) : generatedContent?.improvedContent ? (
-              <div style={{
-                fontSize: '13px',
-                color: '#374151',
-                lineHeight: '1.5',
-                whiteSpace: 'pre-wrap'
-              }}>
-                {generatedContent.improvedContent}
-              </div>
+              <StreamingText text={generatedContent.improvedContent} speed={20} />
             ) : (
               <p>{getTranslation(currentLanguage, 'clickGenerateButton')}</p>
             )}
@@ -366,8 +344,130 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
             80% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-5px); }
           }
+          
+          @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
         `}
       </style>
+    </div>
+  );
+}; 
+
+// Streaming text component
+const StreamingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 30 }) => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayedText(text.slice(0, currentIndex + 1));
+        setCurrentIndex(currentIndex + 1);
+      }, speed);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, text, speed]);
+
+  useEffect(() => {
+    setDisplayedText('');
+    setCurrentIndex(0);
+  }, [text]);
+
+  return (
+    <div style={{
+      fontSize: '13px',
+      color: '#374151',
+      lineHeight: '1.5',
+      whiteSpace: 'pre-wrap'
+    }}>
+      {displayedText}
+      {currentIndex < text.length && (
+        <span style={{
+          display: 'inline-block',
+          width: '2px',
+          height: '16px',
+          backgroundColor: '#0B66C2',
+          marginLeft: '2px',
+          animation: 'blink 1s infinite'
+        }}></span>
+      )}
+    </div>
+  );
+}; 
+
+// Skeleton loading component
+const SkeletonLoader: React.FC = () => {
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px'
+    }}>
+      {/* First line - longer */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '85%',
+        animation: 'pulse 1.5s ease-in-out infinite'
+      }}></div>
+      
+      {/* Second line - medium */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '70%',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        animationDelay: '0.2s'
+      }}></div>
+      
+      {/* Third line - shorter */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '60%',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        animationDelay: '0.4s'
+      }}></div>
+      
+      {/* Fourth line - longer */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '80%',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        animationDelay: '0.6s'
+      }}></div>
+      
+      {/* Fifth line - medium */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '65%',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        animationDelay: '0.8s'
+      }}></div>
+      
+      {/* Sixth line - shorter */}
+      <div style={{
+        height: '12px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '4px',
+        width: '45%',
+        animation: 'pulse 1.5s ease-in-out infinite',
+        animationDelay: '1s'
+      }}></div>
     </div>
   );
 }; 
