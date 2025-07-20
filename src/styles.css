@@ -567,6 +567,12 @@ gsap animation
   display: none !important;
 }
 
+.section-cards-holder {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .section-card {
     background: white;
     border-radius: 20px;
