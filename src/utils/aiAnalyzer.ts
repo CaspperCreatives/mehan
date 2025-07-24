@@ -1,4 +1,4 @@
-import { getOpenAIAPIKey, getGeminiAPIKey } from './apiKeys';
+import { getOpenAIAPIKey } from './apiKeys';
 
 /**
  * Retrieves the OpenAI API key from environment variables
@@ -12,20 +12,6 @@ const getOpenAIKey = (): string => {
   // Return empty string if not available - will be handled by error handling
   return '';
 };
-
-/**
- * Retrieves the Gemini API key from environment variables
- * @returns {string} The Gemini API key
- */
-const getGeminiKey = (): string => {
-  // Try to get from environment variable first
-  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
-    return process.env.GEMINI_API_KEY;
-  }
-  // Return empty string if not available - will be handled by error handling
-  return '';
-};
-
 
 /**
  * Interface defining scoring criteria for profile evaluation
@@ -253,7 +239,6 @@ const SCORING_CRITERIA: ScoringCriteria[] = [
  */
 export class AIProfileAnalyzer {
   private openAIKey = getOpenAIKey();
-  private geminiKey = getGeminiKey();
 
   private language = (document.body.dir === 'rtl' || document.documentElement.lang === 'ar')? 'ar' : 'en';
 
@@ -689,13 +674,17 @@ export class AIProfileAnalyzer {
   private processSummaryCriteria(criteria: ScoringCriteria, profileData: any, maxScore: number) {
     if (criteria.criteria === "length" && criteria.calculate?.type === "words") {
       // Handle both AI response format (about) and original format (summary)
-      const summaryText = profileData.about || profileData.summary || '';
+      let summaryText = profileData.about || profileData.summary || '';
+      // If about/summary is an object (e.g., {content: string}), extract the content
+      if (summaryText && typeof summaryText === 'object' && summaryText.content) {
+        summaryText = summaryText.content;
+      }
+      if (typeof summaryText !== 'string') summaryText = '';
       const wordCount = summaryText ? summaryText.split(/\s+/).length : 0;
       const minWords = criteria.calculate.min || 200;
       const score = wordCount >= minWords ? maxScore : Math.round((wordCount / minWords) * maxScore); // Full mark on length regardless of word count
       
       // Get current language and translations
-      // const language = document.documentElement.lang === 'ar' ? 'ar' : 'en';
       const { getTranslation } = require('./translations');
       const summaryLengthText = getTranslation(this.language, 'summaryLength');
       const wordsText = getTranslation(this.language, 'words');
@@ -952,10 +941,9 @@ export class AIProfileAnalyzer {
    * @param {any} profileData - The profile data to analyze
    * @param {number} retryCount - Current retry attempt (internal use)
    * @param {boolean} forceRefresh - Whether to bypass cache and force fresh analysis
-   * @param {string} [aiProvider='openai'] - AI provider to use ('openai' or 'gemini')
    * @returns {Promise<AIAnalysisResult>} Comprehensive analysis result
    */
-  async analyzeProfile(profileData: any, retryCount: number = 0, forceRefresh: boolean = false, aiProvider: string = 'openai'): Promise<AIAnalysisResult> {
+  async analyzeProfile(profileData: any, retryCount: number = 0, forceRefresh: boolean = false): Promise<AIAnalysisResult> {
     const maxRetries = 3;
     const cachedResult = localStorage.getItem(window.location.href);
 
@@ -964,11 +952,8 @@ export class AIProfileAnalyzer {
     }
 
     try {
-      // const language = document.documentElement.lang === 'ar' ? 'Arabic' : 'English';
       const prompt = this.buildAnalysisPrompt(profileData);
-      
-      const response = await this.callAI(prompt, aiProvider);
-      
+      const response = await this.callAI(prompt);
       const aiResult = this.parseAIResponse(response);
       localStorage.setItem(window.location.href, JSON.stringify(aiResult));
       return aiResult;
@@ -976,18 +961,8 @@ export class AIProfileAnalyzer {
       // Retry logic for certain types of errors
       if (retryCount < maxRetries && this.shouldRetry(error)) {
         await this.delay(13000 * (retryCount + 1)); // Exponential backoff
-        return this.analyzeProfile(profileData, retryCount + 1, forceRefresh, aiProvider);
+        return this.analyzeProfile(profileData, retryCount + 1, forceRefresh);
       }
-
-      // If OpenAI fails, try Gemini as fallback
-      if (aiProvider === 'openai' && retryCount === 0) {
-        try {
-          return this.analyzeProfile(profileData, 0, forceRefresh, 'gemini');
-        } catch (geminiError) {
-          // If both fail, use fallback analysis
-        }
-      }
-
       return this.getEnhancedFallbackAnalysis(profileData);
     }
   }
@@ -998,14 +973,34 @@ export class AIProfileAnalyzer {
    * @param {string} provider - The AI provider to use ('openai' or 'gemini')
    * @returns {Promise<string>} The AI response
    */
-  private async callAI(prompt: string, provider: string = 'openai'): Promise<string> {
-    switch (provider.toLowerCase()) {
-      case 'gemini':
-        return this.callGemini(prompt);
-      case 'openai':
-      default:
-        return this.callOpenAI(prompt);
+  private async callAI(prompt: string): Promise<string> {
+    const apiKey = getOpenAIAPIKey();
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
     }
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    });
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.choices[0].message.content;
   }
 
   /**
@@ -1080,11 +1075,11 @@ export class AIProfileAnalyzer {
    * @throws {Error} When the API request fails
    */
   private async callGemini(prompt: string): Promise<string> {
-    if (!this.geminiKey) {
+    if (!this.openAIKey) {
       throw new Error('Gemini API key not configured. Please set GEMINI_API_KEY in your environment variables.');
     }
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.geminiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.openAIKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

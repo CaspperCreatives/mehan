@@ -37,7 +37,7 @@ export class ExportManager {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.font = '16px Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Calculated by Mehan.com', canvas.width / 2, 40);
+    ctx.fillText('Calculated by Mehan.ai', canvas.width / 2, 40);
 
     // Date at the top
     ctx.font = '16px Arial, sans-serif';

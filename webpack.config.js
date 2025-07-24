@@ -84,7 +84,6 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({
         OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
         GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || ''
       })
     }),
