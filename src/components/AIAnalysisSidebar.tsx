@@ -196,6 +196,8 @@ const GaugeSlider: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
+const GENERATE_LIMIT = 3;
+
 const SectionsSlider: React.FC<{ 
   sections: any[], 
   analysis: AIAnalysisResult, 
@@ -295,6 +297,17 @@ const SectionsSlider: React.FC<{
     setGeneratedContentLoading(false);
   }, [selectedSection]);
 
+  // Add state for generate counter
+  const [generateCount, setGenerateCount] = useState<number>(() => {
+    const stored = localStorage.getItem('generateContentCount');
+    return stored ? parseInt(stored, 10) : 0;
+  });
+
+  // Update localStorage whenever generateCount changes
+  useEffect(() => {
+    localStorage.setItem('generateContentCount', generateCount.toString());
+  }, [generateCount]);
+
   // Helper function to find section by title
   const findSectionByTitle = (title: string) => {
     return sections.find(section => {
@@ -312,6 +325,17 @@ const SectionsSlider: React.FC<{
     });
   };
 
+  // List of sections that can be AI enhanced
+  const AI_ENHANCEABLE_SECTIONS = [
+    'summary',
+    'headline',
+    'experiences',
+    'education',
+    'skills',
+    'projects',
+    'recommendations'
+  ];
+
   /**
    * Generate content for a specific section using AI
    * @param sectionTitle - The title of the section to generate content for
@@ -320,36 +344,40 @@ const SectionsSlider: React.FC<{
   const generateContentForSection = async (sectionTitle: string, originalData: any) => {
     setGeneratedContentLoading(true);
     setGeneratedContent(null);
-    
     try {
-      // Use generated data if available, otherwise fall back to original profile data
       const dataSource = generatedData || profile;
-      
-      // Get skills and experience data for context from the appropriate source
-      // Handle both array and object formats
       const skillsData = dataSource?.skills?.content || 
                         (Array.isArray(dataSource?.skills) ? dataSource?.skills : '') || '';
       const experienceData = dataSource?.experience?.content || 
                            (Array.isArray(dataSource?.experience) ? dataSource?.experience : '') || '';
-      
-      // Get scoring criteria for this section to help AI generate content that maximizes score
       const sectionCriteria = getScoringCriteriaForSection(sectionTitle);
-      
-      // Create a prompt for generating content for the specific section
-      const prompt = `Generate improved content for the LinkedIn profile section "${sectionTitle}". 
-
-Original content:
-${originalData?.content || 'No content available'}
-
-Context from profile:
-Skills: ${skillsData || 'No skills data available'}
-Work Experience: ${experienceData || 'No experience data available'}
-
-Scoring Criteria for this section (aim to meet these requirements for maximum score):
-${sectionCriteria}
-
-Please provide an improved version of this section content. Consider the person's skills and work experience when generating the content to make it more relevant and contextual. Focus on making the content more professional, engaging, and optimized for LinkedIn while meeting the scoring criteria above. Return only the improved content text without any additional formatting or titles.`;
-
+      let prompt = '';
+      switch (sectionTitle.toLowerCase()) {
+        case 'summary':
+          prompt = `You are a LinkedIn experience optimizer. This is the summary section content. Rewrite it to fit these criteria and make it more LinkedIn-attractive.\n\nCriteria:\n${sectionCriteria}\n\nOriginal content:\n${originalData?.content || 'No content available'}\n\nContext from profile:\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved summary text without any additional formatting or titles.`;
+          break;
+        case 'headline':
+          prompt = `You are a LinkedIn headline expert. Rewrite the following headline to maximize impact, professionalism, and keyword optimization for LinkedIn.\n\nCriteria:\n${sectionCriteria}\n\nOriginal headline:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved headline text without any additional formatting or titles.`;
+          break;
+        case 'experiences':
+          prompt = `You are a LinkedIn experience section optimizer. Rewrite the following experience section to be more achievement-focused, detailed, and attractive for recruiters.\n\nCriteria:\n${sectionCriteria}\n\nOriginal experience:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved experience section text without any additional formatting or titles.`;
+          break;
+        case 'education':
+          prompt = `You are a LinkedIn education section expert. Rewrite the following education section to be more complete, relevant, and professional.\n\nCriteria:\n${sectionCriteria}\n\nOriginal education:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved education section text without any additional formatting or titles.`;
+          break;
+        case 'skills':
+          prompt = `You are a LinkedIn skills section optimizer. Rewrite the following skills section to highlight the most relevant and impactful skills for the user's industry and experience.\n\nCriteria:\n${sectionCriteria}\n\nOriginal skills:\n${originalData?.content || 'No content available'}\n\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved skills section text without any additional formatting or titles.`;
+          break;
+        case 'projects':
+          prompt = `You are a LinkedIn projects section expert. Rewrite the following projects section to be more detailed, engaging, and relevant for recruiters.\n\nCriteria:\n${sectionCriteria}\n\nOriginal projects:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved projects section text without any additional formatting or titles.`;
+          break;
+        case 'recommendations':
+          prompt = `You are a LinkedIn recommendations section optimizer. Rewrite the following recommendations section to be more professional, relevant, and impactful.\n\nCriteria:\n${sectionCriteria}\n\nOriginal recommendations:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved recommendations section text without any additional formatting or titles.`;
+          break;
+        default:
+          prompt = '';
+      }
+      if (!prompt) throw new Error('AI enhancement is not available for this section.');
       // Get API key from centralized management
       const apiKey = getOpenAIAPIKey();
       if (!apiKey) {
@@ -518,7 +546,9 @@ Please provide an improved version of this section content. Consider the person'
   }
 
   const handleGenerateContent = () => {
+    if (generateCount >= GENERATE_LIMIT) return;
     if (!selectedSection || !profile) return;
+    setGenerateCount((prev) => Math.min(prev + 1, GENERATE_LIMIT));
     
     // Hide the section-cards-holder div with smooth transition
     const sectionCardsHolder = document.querySelector('.section-cards-holder');
@@ -599,11 +629,8 @@ Please provide an improved version of this section content. Consider the person'
    */
   const shouldShowGenerateButton = (): boolean => {
     if (!selectedSection) return false;
-    
     const sectionTitle = selectedSection.title.toLowerCase();
-    const sectionsWithoutGenerate = ['linkedinurl', 'profilepicture', 'backgroundimage'];
-    
-    return !sectionsWithoutGenerate.includes(sectionTitle);
+    return AI_ENHANCEABLE_SECTIONS.includes(sectionTitle);
   };
 
   /**
@@ -875,35 +902,42 @@ Please provide an improved version of this section content. Consider the person'
 
             {shouldShowGenerateButton() && (
               <Tooltip text={getTranslation(currentLanguage, 'generateContent')} position="left">
-
                 <button
                   onClick={handleGenerateContent}
+                  disabled={generateCount >= GENERATE_LIMIT}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     width: '40px',
                     height: '40px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    backgroundColor: generateCount >= GENERATE_LIMIT ? '#f3f4f6' : 'rgba(255, 255, 255, 0.9)',
                     border: '1px solid #e5e7eb',
                     borderRadius: '50%',
-                    cursor: 'pointer',
+                    cursor: generateCount >= GENERATE_LIMIT ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s ease',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                    position: 'relative'
+                    position: 'relative',
+                    opacity: generateCount >= GENERATE_LIMIT ? 0.6 : 1
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    if (generateCount < GENERATE_LIMIT) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(0)';
+                    if (generateCount < GENERATE_LIMIT) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
                   }}
                   onMouseDown={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
+                    if (generateCount < GENERATE_LIMIT) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
                   }}
                 >
                   <svg
@@ -925,6 +959,23 @@ Please provide an improved version of this section content. Consider the person'
                       fill="#6b7280"
                     />
                   </svg>
+                  {/* Counter badge */}
+                  <span style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-6px',
+                    backgroundColor: generateCount >= GENERATE_LIMIT ? '#ef4444' : '#22c55e',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    fontSize: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    zIndex: 2
+                  }}>{GENERATE_LIMIT - generateCount}</span>
                 </button>
               </Tooltip>
             )}
