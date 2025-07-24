@@ -196,7 +196,7 @@ const GaugeSlider: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
-const GENERATE_LIMIT = 3;
+const GENERATE_LIMIT = 90;
 
 const SectionsSlider: React.FC<{ 
   sections: any[], 
@@ -354,63 +354,47 @@ const SectionsSlider: React.FC<{
       let prompt = '';
       switch (sectionTitle.toLowerCase()) {
         case 'summary':
-          prompt = `You are a LinkedIn experience optimizer. This is the summary section content. Rewrite it to fit these criteria and make it more LinkedIn-attractive.\n\nCriteria:\n${sectionCriteria}\n\nOriginal content:\n${originalData?.content || 'No content available'}\n\nContext from profile:\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved summary text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn experience optimizer. This is the summary section content. Rewrite it to fit these criteria and make it more LinkedIn-attractive.\n\nCriteria:\n${sectionCriteria}\n\nOriginal content:\n${originalData?.content || 'No content available'}\n\nContext from profile:\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved summary in markdown format with proper paragraphs and structure.`;
           break;
         case 'headline':
-          prompt = `You are a LinkedIn headline expert. Rewrite the following headline to maximize impact, professionalism, and keyword optimization for LinkedIn.\n\nCriteria:\n${sectionCriteria}\n\nOriginal headline:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved headline text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn headline expert. Rewrite the following headline to maximize impact, professionalism, and keyword optimization for LinkedIn.\n\nCriteria:\n${sectionCriteria}\n\nOriginal headline:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved headline in markdown format.`;
           break;
         case 'experiences':
-          prompt = `You are a LinkedIn experience section optimizer. Rewrite the following experience section to be more achievement-focused, detailed, and attractive for recruiters.\n\nCriteria:\n${sectionCriteria}\n\nOriginal experience:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved experience section text without any additional formatting or titles.`;
+          prompt = `
+          You are a LinkedIn experience section optimizer. 
+          Rewrite the following experience section to be more achievement-focused, detailed, and attractive for recruiters.\n\nCriteria:\n${sectionCriteria}\n\n
+          Original experience:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\n
+          Work Experience: ${experienceData || 'No experience data available'}
+          \n\nReturn the improved experience section in markdown format with proper headers for each position.
+          \n Use proper markdown structure with headers for each position`;
           break;
         case 'education':
-          prompt = `You are a LinkedIn education section expert. Rewrite the following education section to be more complete, relevant, and professional.\n\nCriteria:\n${sectionCriteria}\n\nOriginal education:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved education section text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn education section expert. Rewrite the following education section to be more complete, relevant, and professional.\n\nCriteria:\n${sectionCriteria}\n\nOriginal education:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved education section in markdown format with proper structure.\n\n Use bullet points or structured format`; 
           break;
         case 'skills':
-          prompt = `You are a LinkedIn skills section optimizer. Rewrite the following skills section to highlight the most relevant and impactful skills for the user's industry and experience.\n\nCriteria:\n${sectionCriteria}\n\nOriginal skills:\n${originalData?.content || 'No content available'}\n\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved skills section text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn skills section optimizer. Rewrite the following skills section to highlight the most relevant and impactful skills for the user's industry and experience.\n\nCriteria:\n${sectionCriteria}\n\nOriginal skills:\n${originalData?.content || 'No content available'}\n\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved skills section in markdown format with bullet points or numbered lists. \n Use bullet points or numbered lists`;
           break;
         case 'projects':
-          prompt = `You are a LinkedIn projects section expert. Rewrite the following projects section to be more detailed, engaging, and relevant for recruiters.\n\nCriteria:\n${sectionCriteria}\n\nOriginal projects:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved projects section text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn projects section expert. Rewrite the following projects section to be more detailed, engaging, and relevant for recruiters.\n\nCriteria:\n${sectionCriteria}\n\nOriginal projects:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved projects section in markdown format with proper headers and descriptions.\n\n Use markdown formatting with proper headers and descriptions`;
           break;
         case 'recommendations':
-          prompt = `You are a LinkedIn recommendations section optimizer. Rewrite the following recommendations section to be more professional, relevant, and impactful.\n\nCriteria:\n${sectionCriteria}\n\nOriginal recommendations:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn only the improved recommendations section text without any additional formatting or titles.`;
+          prompt = `You are a LinkedIn recommendations section optimizer. Rewrite the following recommendations section to be more professional, relevant, and impactful.\n\nCriteria:\n${sectionCriteria}\n\nOriginal recommendations:\n${originalData?.content || 'No content available'}\n\nSkills: ${skillsData || 'No skills data available'}\nWork Experience: ${experienceData || 'No experience data available'}\n\nReturn the improved recommendations section in markdown format with proper structure.`;
           break;
         default:
           prompt = '';
       }
       if (!prompt) throw new Error('AI enhancement is not available for this section.');
-      // Get API key from centralized management
-      const apiKey = getOpenAIAPIKey();
-      if (!apiKey) {
-        throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
-      }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
+      prompt += `\n\nIMPORTANT INSTRUCTIONS:
+        - Use only the original content provided, do not add any new content or unreal facts
+        - The returning content should be in the same language as the original content
+        - Format the response in proper markdown format with appropriate headers, lists, and formatting
+        - Make the content more professional and LinkedIn-optimized while keeping the original information
+        - don't user these \`\`\` \`\`\` tags in the response
+        - if there are no accurate number or precise data, don't add any number or precise data`;
 
-      if (!response.ok) {
-        throw new Error(`AI API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = await generateContentWithAI(prompt);
       
-      // Set the generated content directly as the improved content
       setGeneratedContent({
         improvedContent: aiResponse.trim()
       });
@@ -424,6 +408,38 @@ const SectionsSlider: React.FC<{
       setGeneratedContentLoading(false);
     }
   };
+
+
+  const generateContentWithAI = async (prompt: string) => {
+    const apiKey = getOpenAIAPIKey();
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in your environment variables.');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    });
+
+    const data = await response.json();
+    const aiResponse = data.choices[0].message.content;
+
+    return aiResponse;
+  }
 
   /**
    * Get scoring criteria for a specific section to help AI generate content that maximizes score
@@ -575,8 +591,79 @@ const SectionsSlider: React.FC<{
           // Original structure: { content: string }
           originalData = dataSource[profileKey];
         } else if (Array.isArray(dataSource[profileKey])) {
-          // New structure: array of objects
-          originalData = { content: JSON.stringify(dataSource[profileKey], null, 2) };
+          // New structure: array of objects - convert to readable format
+          const data = dataSource[profileKey];
+          const sectionTitle = selectedSection.title.toLowerCase();
+          let formattedContent = '';
+          
+          if (sectionTitle === 'experiences' || sectionTitle === 'experience') {
+            formattedContent = data.map((exp: any, index: number) => 
+              `${index + 1}. ${exp.title || 'Unknown Position'}\n` +
+              `   Company: ${exp.company || 'Unknown Company'}\n` +
+              `   Role: ${exp.role || 'Unknown Role'}\n` +
+              `   Duration: ${exp.duration || 'Unknown Duration'}\n` +
+              `   Length: ${exp.length || 'Unknown Length'}\n` +
+              `   Description: ${exp.description || 'No description provided'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'education') {
+            formattedContent = data.map((edu: any, index: number) => 
+              `${index + 1}. ${edu.school || 'Unknown School'}\n` +
+              `   Degree: ${edu.degree || 'Unknown Degree'}\n` +
+              `   Field: ${edu.field || 'Unknown Field'}\n` +
+              `   Duration: ${edu.duration || 'Unknown Duration'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'skills') {
+            formattedContent = data.map((skill: any, index: number) => 
+              `${index + 1}. ${skill.name || 'Unknown Skill'} (${skill.endorsements || 0} endorsements)`
+            ).join('\n');
+          } else if (sectionTitle === 'projects') {
+            formattedContent = data.map((project: any, index: number) => 
+              `${index + 1}. ${project.title || 'Unknown Project'}\n` +
+              `   Description: ${project.description || 'No description provided'}\n` +
+              `   URL: ${project.url || 'No URL provided'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'recommendations') {
+            formattedContent = data.map((rec: any, index: number) => 
+              `${index + 1}. ${rec.name || 'Unknown Person'}\n` +
+              `   Title: ${rec.title || 'Unknown Title'}\n` +
+              `   Company: ${rec.company || 'Unknown Company'}\n` +
+              `   Content: ${rec.content || 'No content provided'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'publications') {
+            formattedContent = data.map((pub: any, index: number) => 
+              `${index + 1}. ${pub.title || 'Unknown Publication'}\n` +
+              `   Description: ${pub.description || 'No description provided'}\n` +
+              `   URL: ${pub.url || 'No URL provided'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'certifications' || sectionTitle === 'certificates') {
+            formattedContent = data.map((cert: any, index: number) => 
+              `${index + 1}. ${cert.name || 'Unknown Certification'}\n` +
+              `   Issuer: ${cert.issuer || 'Unknown Issuer'}\n` +
+              `   Date: ${cert.date || 'Unknown Date'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'languages') {
+            formattedContent = data.map((lang: any, index: number) => 
+              `${index + 1}. ${lang.name || 'Unknown Language'} (${lang.proficiency || 'Unknown Proficiency'})`
+            ).join('\n');
+          } else if (sectionTitle === 'volunteering') {
+            formattedContent = data.map((vol: any, index: number) => 
+              `${index + 1}. ${vol.title || 'Unknown Position'}\n` +
+              `   Organization: ${vol.organization || 'Unknown Organization'}\n` +
+              `   Description: ${vol.description || 'No description provided'}\n` +
+              `   Duration: ${vol.duration || 'Unknown Duration'}`
+            ).join('\n\n');
+          } else if (sectionTitle === 'honorsawards') {
+            formattedContent = data.map((award: any, index: number) => 
+              `${index + 1}. ${award.title || 'Unknown Award'}\n` +
+              `   Description: ${award.description || 'No description provided'}\n` +
+              `   Date: ${award.date || 'Unknown Date'}`
+            ).join('\n\n');
+          } else {
+            // Fallback for other array data
+            formattedContent = JSON.stringify(data, null, 2);
+          }
+          
+          originalData = { content: formattedContent };
         } else {
           // Fallback
           originalData = { content: String(dataSource[profileKey]) };
@@ -904,7 +991,7 @@ const SectionsSlider: React.FC<{
               <Tooltip text={getTranslation(currentLanguage, 'generateContent')} position="left">
                 <button
                   onClick={handleGenerateContent}
-                  disabled={generateCount >= GENERATE_LIMIT}
+                  // disabled={generateCount >= GENERATE_LIMIT}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

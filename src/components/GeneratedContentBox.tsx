@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage, getTranslation } from '../utils/translations';
 import { getProfileKeyForSection } from '../utils/sectionDataMap';
+import { marked } from 'marked';
 
 interface GeneratedContentBoxProps {
   showGeneratedContent: boolean;
@@ -103,7 +104,9 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
           borderRadius: '6px',
-          padding: '12px'
+          padding: '12px',
+          maxWidth: '363px',
+          overflowY: 'auto'
         }}>
           <h5 style={{
             fontSize: '14px',
@@ -117,10 +120,10 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
             fontSize: '13px',
             color: '#6b7280',
             lineHeight: '1.4',
-            maxHeight: '200px',
+            maxWidth: '363px',
             overflowY: 'auto'
           }}>
-            {(() => {
+            <MarkdownRenderer content={(() => {
               const sectionTitle = selectedSection.title.toLowerCase();
               const profileKey = getProfileKeyForSection(sectionTitle);
               let originalData = null;
@@ -233,9 +236,8 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
                   originalData = { content: String(profile[profileKey]) };
                 }
               }
-              
               return originalData?.content || 'No content available for this section';
-            })()}
+            })()} />
           </div>
         </div>
         
@@ -244,7 +246,8 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
           borderRadius: '6px',
-          padding: '12px'
+          padding: '12px',
+          maxWidth: "363px"
         }}>
           <div style={{
             display: 'flex',
@@ -318,17 +321,22 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
               </div>
             )}
           </div>
-          <div style={{
-            fontSize: '13px',
-            color: '#6b7280',
-            lineHeight: '1.4',
-            maxHeight: '200px',
-            overflowY: 'auto'
-          }}>
+          <div 
+            className="markdown-content"
+            style={{
+              fontSize: '13px',
+              color: '#6b7280',
+              lineHeight: '1.4',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              width: '100%'
+            }}
+          >
             {generatedContentLoading ? (
               <SkeletonLoader />
             ) : generatedContent?.improvedContent ? (
-              <StreamingText text={generatedContent.improvedContent} speed={20} />
+              // Render markdown for improved content using marked
+              <MarkdownRenderer content={generatedContent.improvedContent} />
             ) : (
               <p>{getTranslation(currentLanguage, 'clickGenerateButton')}</p>
             )}
@@ -354,11 +362,142 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
           }
+          
+          /* Ensure markdown content doesn't inherit unwanted styles */
+          .markdown-content {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            color: #374151;
+          }
+          
+          .markdown-content * {
+            box-sizing: border-box;
+          }
+          
+          /* Styling for marked output */
+          .markdown-content h1 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 16px 0 12px 0;
+            color: #1f2937;
+            line-height: 1.3;
+          }
+          
+          .markdown-content h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 14px 0 10px 0;
+            color: #1f2937;
+            line-height: 1.3;
+          }
+          
+          .markdown-content h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 12px 0 8px 0;
+            color: #1f2937;
+            line-height: 1.3;
+          }
+          
+          .markdown-content p {
+            margin: 0 0 12px 0;
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.5;
+          }
+          
+          .markdown-content ul {
+            margin: 8px 0 12px 0;
+            padding-left: 24px;
+            font-size: 13px;
+            color: #374151;
+          }
+          
+          .markdown-content ol {
+            margin: 8px 0 12px 0;
+            padding-left: 24px;
+            font-size: 13px;
+            color: #374151;
+          }
+          
+          .markdown-content li {
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.4;
+          }
+          
+          .markdown-content strong {
+            font-weight: 600;
+            color: #1f2937;
+          }
+          
+          .markdown-content em {
+            font-style: italic;
+            color: #374151;
+          }
+          
+          .markdown-content code {
+            background: #f3f4f6;
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 12px;
+          }
+          
+          .markdown-content pre {
+            background: #f3f4f6;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 12px;
+            overflow-x: auto;
+          }
+          
+          .markdown-content blockquote {
+            border-left: 3px solid #0B66C2;
+            margin: 8px 0;
+            padding: 4px 12px;
+            color: #6b7280;
+            background: #f3f4f6;
+          }
         `}
       </style>
     </div>
   );
 }; 
+
+// Markdown renderer component using marked
+const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+  const [htmlContent, setHtmlContent] = useState('');
+
+  useEffect(() => {
+    const renderMarkdown = async () => {
+      try {
+        const html = await marked(content, {
+          breaks: true,
+          gfm: true
+        });
+        setHtmlContent(html);
+      } catch (error) {
+        console.error('Error rendering markdown:', error);
+        setHtmlContent(content); // Fallback to plain text
+      }
+    };
+
+    renderMarkdown();
+  }, [content]);
+
+  return (
+    <div 
+      className="markdown-content"
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+      style={{
+        fontSize: '13px',
+        color: '#374151',
+        lineHeight: '1.5'
+      }}
+    />
+  );
+};
 
 // Streaming text component
 const StreamingText: React.FC<{ text: string; speed?: number }> = ({ text, speed = 30 }) => {
