@@ -5,7 +5,9 @@
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "test": "jest"
+    "test": "jest",
+    "deploy": "npm run build && firebase deploy --only functions --config firebase.json",
+    "start": "npm run build && firebase emulators:start --only functions --config firebase.json"
   },
   "dependencies": {
     "@fontsource/tajawal": "^5.2.6",
@@ -14,6 +16,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "chart.js": "^4.4.9",
+    "firebase": "^10.7.0",
     "gsap": "^3.13.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",

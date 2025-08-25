@@ -95,8 +95,8 @@ const initialize = async () => {
     </Suspense>
   );
 
-  // Set up toggle logic
-  setSidebarVisible(false);
+  // Set up toggle logic - make sidebar visible by default for testing
+  setSidebarVisible(true);
   toggleButton.onclick = () => {
     const sidebar = document.getElementById('linkedin-profile-scorer-sidebar');
     if (sidebar) {

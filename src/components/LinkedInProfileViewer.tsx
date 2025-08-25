@@ -2,50 +2,9 @@ import React, { useState } from 'react';
 import { useLinkedInProfile } from '../utils/hooks/useLinkedInProfile';
 import { AIAnalysisSidebar } from './AIAnalysisSidebar';
 import { ExportButtons } from './ExportButtons';
-import { ProfileData } from '../utils/profileExtractor';
-import { aiAnalyzer, hasCustomLinkedInUrl } from '../utils/aiAnalyzer';
+import { hasCustomLinkedInUrl } from '../utils/aiAnalyzer';
 import { useLanguage, getTranslation } from '../utils/translations';
 
-const CircularProgress: React.FC<{ value: number; size?: number; stroke?: number; color?: string; fontSize?: string }> = ({ value, size = 96, stroke = 8, color = '#0B66C2', fontSize = '1.5rem' }) => {
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
-  return (
-    <svg width={size} height={size} style={{ display: 'block' }}>
-      <circle
-        stroke="#E0E0E0"
-        fill="none"
-        strokeWidth={stroke}
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-      />
-      <circle
-        stroke={color}
-        fill="none"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        style={{ transition: 'stroke-dashoffset 0.7s cubic-bezier(.4,2,.6,1)' }}
-      />
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dy=".3em"
-        fontSize={fontSize}
-        fontWeight="700"
-        fill={color}
-      >
-        {`${value}%`}
-      </text>
-    </svg>
-  );
-};
 
 export const LinkedInProfileViewer: React.FC = () => {
   const { profile, loading, error, aiAnalysis, aiLoading, aiError, refreshProfileData } = useLinkedInProfile();
@@ -70,46 +29,19 @@ export const LinkedInProfileViewer: React.FC = () => {
     aiAnalysis: true, // AI Analysis section is expanded by default
   });
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  // Extract cache information from the profile data
+  const getCacheInfo = () => {
+    if (profile?.cached !== undefined) {
+      return {
+        cached: profile.cached,
+        timestamp: profile.timestamp
+      };
+    }
+    return { cached: false, timestamp: undefined };
   };
 
-  // Convert profile data to the format expected by AI analyzer
-  const getProfileDataForAI = (): ProfileData => {
-    if (!profile) return {} as ProfileData;
-    
-    return {
-      name: profile.basicInfo.name,
-      headline: profile.basicInfo.headline,
-      currentPosition: profile.basicInfo.headline,
-      hasProfilePhoto: !!profile.basicInfo.profileImage,
-      summary: profile.about?.content || '',
-      customUrl: profile.customUrl || '',
-      recentActivityCount: 0,
-      experience: profile.experience?.map((exp: any) => ({
-        title: exp.title,
-        company: exp.company,
-        duration: exp.duration
-      })) || [],
-      education: profile.education?.map((edu: any) => ({
-        school: edu.school,
-        degree: edu.degree,
-        field: edu.field,
-        duration: edu.duration
-      })) || [],
-      skills: profile.skills?.map((skill: any) => ({
-        name: skill.name,
-        endorsements: skill.endorsements
-      })) || [],
-      connections: 0,
-      recommendations: 0,
-      country: profile.basicInfo.location || '',
-      backgroundImage: ''
-    };
-  };
+  const { cached, timestamp } = getCacheInfo();
+
 
   if (loading) {
     return <div className='loader-container'
@@ -137,23 +69,8 @@ export const LinkedInProfileViewer: React.FC = () => {
     return <div>{getTranslation(currentLanguage, 'error')}: {error}</div>;
   }
 
-  if (!profile) {
-    return <div>{getTranslation(currentLanguage, 'noProfileDataFound')}</div>;
-  }
 
-  const handleMouseOver = (className: string) => {
-    const section = document.querySelector(`.${className}`) as HTMLElement;
-    section?.classList.add('hover-section');
-    window.scrollTo({
-      top: section?.offsetTop - 100,
-      behavior: 'smooth'
-    });
-  };
 
-  const handleMouseLeave = (className: string) => {
-    const section = document.querySelector(`.${className}`) as HTMLElement;
-    section?.classList.remove('hover-section');
-  };
 
   // Detect RTL
   const isRTL = document?.documentElement?.dir === 'rtl';
@@ -165,32 +82,6 @@ export const LinkedInProfileViewer: React.FC = () => {
     profileCustomUrl: profile?.customUrl || getTranslation(currentLanguage, 'notSet')
   };
 
-  const renderSection = (
-    sectionKey: string,
-    title: string,
-    content: React.ReactNode,
-    defaultExpanded: boolean = false
-  ) => {
-    const isExpanded = expandedSections[sectionKey] ?? defaultExpanded;
-    
-    return (
-      <section className={`${sectionKey.toLowerCase()} section`}>
-        <div 
-          className="section-header" 
-          onClick={() => toggleSection(sectionKey)}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <h2>{title}</h2>
-          <span>{isExpanded ? '▼' : '▶'}</span>
-        </div>
-        {isExpanded && (
-          <div className="section-content">
-            {content}
-          </div>
-        )}
-      </section>
-    );
-  };
 
   // Calculate the new score breakdown
 
@@ -215,6 +106,8 @@ export const LinkedInProfileViewer: React.FC = () => {
               error={aiError}
               refreshProfileData={refreshProfileData}
               profile={profile}
+              cached={cached}
+              timestamp={timestamp}
             />
           </div>
         )}
