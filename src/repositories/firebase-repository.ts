@@ -1,4 +1,4 @@
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { initializeApp } from 'firebase/app';
 import { firebaseConfig } from '../config/firebase-config';
 
@@ -39,7 +39,7 @@ export class FirebaseRepository {
   private functions = functions;
 
   /**
-   * Generic method to call any Firebase Cloud Function
+   * Generic method to call any Firebase Cloud Function using HTTP requests
    * @param functionName - Name of the Firebase function to call
    * @param data - Data to pass to the function
    * @param options - Optional configuration for the call
@@ -50,19 +50,54 @@ export class FirebaseRepository {
     data?: any, 
     options: CallMethodOptions = {}
   ): Promise<ApiResponse<T>> {
-    const { timeout = 30000, retries = 1, retryDelay = 1000 } = options;
+    const { timeout = 300000, retries = 3, retryDelay = 2000 } = options;
+    // Use emulator URL in development, production URL otherwise
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const functionUrl = isDevelopment 
+      ? `http://localhost:5001/mehan-7640e/us-central1/${functionName}`
+      : `https://us-central1-mehan-7640e.cloudfunctions.net/${functionName}`;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const callableFunction = httpsCallable(this.functions, functionName);
-        
+        console.log(`🔍 [DEBUG] Calling Firebase function ${functionName} with data:`, data);
 
-        // Make the actual function call
-        const functionPromise = callableFunction(data);
+        // Make the HTTP request
+        const requestPromise = fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data || {}),
+        });
         
-        // Race between the function call and timeout
-        const result = await Promise.race([functionPromise]);
+        const response = await Promise.race([requestPromise]);
         
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('🔍 [DEBUG] Failed to parse JSON response:', parseError);
+          console.error('🔍 [DEBUG] Raw response that failed to parse:', responseText);
+          const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
+          throw new Error(`Invalid JSON response: ${errorMessage}`);
+        }
+
+        console.log(`🔍 [DEBUG] Firebase function ${functionName} response:`, result);
+
+        // Check if the entire result should be the data
+        if (result.success && !result.data && Object.keys(result).length > 2) {
+          return {
+            success: true,
+            data: result as T
+          };
+        }
+
         return {
           success: true,
           data: result.data as T
@@ -71,7 +106,7 @@ export class FirebaseRepository {
       } catch (error) {
         console.error(`Attempt ${attempt} failed for function ${functionName}:`, error);
         
-        // If this is the last attempt, throw the error
+        // If this is the last attempt, return the error
         if (attempt === retries) {
           return {
             success: false,
@@ -142,7 +177,10 @@ export class FirebaseRepository {
    */
   async analyzeLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 300000, retries = 3, retryDelay = 2000 } = options;
-    const functionUrl = 'http://localhost:5001/mehan-7640e/us-central1/analyzeLinkedInProfile';
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const functionUrl = isDevelopment 
+      ? 'http://localhost:5001/mehan-7640e/us-central1/analyzeLinkedInProfile'
+      : 'https://us-central1-mehan-7640e.cloudfunctions.net/analyzeLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -221,7 +259,10 @@ export class FirebaseRepository {
    */
   async getCachedLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 30000, retries = 1, retryDelay = 1000 } = options;
-    const functionUrl = 'http://localhost:5001/mehan-7640e/us-central1/getCachedLinkedInProfile';
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const functionUrl = isDevelopment 
+      ? 'http://localhost:5001/mehan-7640e/us-central1/getCachedLinkedInProfile'
+      : 'https://us-central1-mehan-7640e.cloudfunctions.net/getCachedLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -281,7 +322,10 @@ export class FirebaseRepository {
    */
   async clearCachedLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 30000, retries = 1, retryDelay = 1000 } = options;
-    const functionUrl = 'http://localhost:5001/mehan-7640e/us-central1/clearCachedLinkedInProfile';
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const functionUrl = isDevelopment 
+      ? 'http://localhost:5001/mehan-7640e/us-central1/clearCachedLinkedInProfile'
+      : 'https://us-central1-mehan-7640e.cloudfunctions.net/clearCachedLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {

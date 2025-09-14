@@ -26,12 +26,12 @@ class ProfileController {
     /**
      * Analyze LinkedIn profile with AI
      */
-    async analyzeProfile(url) {
+    async analyzeProfile(url, language, forceRefresh) {
         try {
             if (!url) {
                 throw new Error('URL is required');
             }
-            const result = await this.profileService.analyzeProfile(url);
+            const result = await this.profileService.analyzeProfile(url, language, forceRefresh);
             return result;
         }
         catch (error) {

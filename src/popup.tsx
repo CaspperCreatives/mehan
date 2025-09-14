@@ -4,7 +4,7 @@ import './utils/languageDetector';
 import { useLanguage, getTranslation } from './utils/translations';
 
 const Popup: React.FC = () => {
-  const currentLanguage = useLanguage();
+  const { language: currentLanguage } = useLanguage();
   
   return (
     <div className="popup">

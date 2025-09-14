@@ -28,11 +28,9 @@ export class ScraperService {
     return this.scraperRepo.scrapeLinkedInProfilesBatch(urls);
   }
 
-  async analyzeLinkedInProfile(url: string): Promise<any> {
-    console.log('🔍 [DEBUG] ScraperService.analyzeLinkedInProfile called with URL:', url);
+  async analyzeLinkedInProfile(url: string, language?: string, forceRefresh?: boolean): Promise<any> {
     try {
-      const result = await this.scraperRepo.analyzeLinkedInProfile(url);
-      console.log('🔍 [DEBUG] ScraperService.analyzeLinkedInProfile result:', result);
+      const result = await this.scraperRepo.analyzeLinkedInProfile(url, language, forceRefresh);
       return result;
     } catch (error) {
       console.error('🔍 [DEBUG] ScraperService.analyzeLinkedInProfile error:', error);

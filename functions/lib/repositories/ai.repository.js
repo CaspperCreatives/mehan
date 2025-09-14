@@ -38,12 +38,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OpenAIRepository = void 0;
 const openai_1 = __importDefault(require("openai"));
-const logger = __importStar(require("firebase-functions/logger"));
+const Prompt_service_1 = require("../services/Prompt.service");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 class OpenAIRepository {
     constructor() {
         this._openai = null;
+        this.promptService = new Prompt_service_1.PromptService();
     }
     // Lazy getter for OpenAI client
     get openai() {
@@ -58,15 +59,18 @@ class OpenAIRepository {
         }
         return this._openai;
     }
-    async generateText(prompt) {
+    async generateText(prompt, language) {
         var _a, _b;
         try {
+            const systemMessage = language === 'ar'
+                ? "You are a professional LinkedIn profile optimization expert. Your task is to generate optimized content in Arabic that can directly replace the original content and meets the specific scoring criteria for maximum points. Do NOT provide advice, recommendations, or analysis. Return ONLY the optimized content text in Arabic."
+                : "You are a professional LinkedIn profile optimization expert. Your task is to generate optimized content that can directly replace the original content and meets the specific scoring criteria for maximum points. Do NOT provide advice, recommendations, or analysis. Return ONLY the optimized content text.";
             const completion = await this.openai.chat.completions.create({
                 model: process.env.OPENAI_MODEL || "gpt-4o-mini",
                 messages: [
                     {
                         role: "system",
-                        content: "You are a professional LinkedIn profile analyzer. Provide insightful analysis in a structured format."
+                        content: systemMessage
                     },
                     {
                         role: "user",
@@ -79,63 +83,39 @@ class OpenAIRepository {
             return ((_b = (_a = completion.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content) || "No response generated";
         }
         catch (error) {
-            logger.error('Error generating text with OpenAI:', error);
             throw error;
         }
     }
-    async analyzeLinkedInProfile(profileData) {
+    async analyzeLinkedInProfile(profileData, language) {
         try {
-            const prompt = this.createAnalysisPrompt(profileData);
-            const analysis = await this.generateText(prompt);
+            const prompt = this.promptService.analyzeLinkedInProfilePrompt(profileData, language || 'en');
+            const analysis = await this.generateText(prompt, language);
             return this.parseAnalysisResponse(analysis);
         }
         catch (error) {
-            logger.error('Error analyzing LinkedIn profile:', error);
             throw error;
         }
     }
-    createAnalysisPrompt(profileData) {
-        return `
-        Analyze the following LinkedIn profile data and provide insights:
-
-        Profile Information:
-        - Name: ${profileData.name || 'Not provided'}
-        - Headline: ${profileData.headline || 'Not provided'}
-        - Summary: ${profileData.summary || 'Not provided'}
-        - Location: ${profileData.location || 'Not provided'}
-        - Industry: ${profileData.industry || 'Not provided'}
-
-        Experience:
-        ${profileData.experience ? profileData.experience.map((exp) => `- ${exp.title} at ${exp.company} (${exp.duration || 'Duration not specified'})`).join('\n') : 'No experience listed'}
-
-        Education:
-        ${profileData.education ? profileData.education.map((edu) => `- ${edu.degree} from ${edu.school} (${edu.year || 'Year not specified'})`).join('\n') : 'No education listed'}
-
-        Skills:
-        ${profileData.skills ? profileData.skills.join(', ') : 'No skills listed'}
-
-        Please provide:
-        1. Professional Summary
-        2. Key Strengths
-        3. Career Trajectory Analysis
-        4. Recommendations for Profile Enhancement
-        5. Industry Insights
-        `;
-    }
     parseAnalysisResponse(analysis) {
         try {
-            // Simple parsing - you can enhance this based on your needs
-            return {
-                rawAnalysis: analysis,
-                summary: analysis.substring(0, 200) + "...",
-                timestamp: new Date().toISOString()
-            };
+            // Clean the analysis string by removing markdown code blocks if present
+            let cleanAnalysis = analysis.trim();
+            // Remove markdown code blocks if they exist
+            if (cleanAnalysis.startsWith('```json')) {
+                cleanAnalysis = cleanAnalysis.replace(/^```json\s*/, '');
+            }
+            if (cleanAnalysis.endsWith('```')) {
+                cleanAnalysis = cleanAnalysis.replace(/\s*```$/, '');
+            }
+            // Parse the cleaned JSON
+            const parsed = JSON.parse(cleanAnalysis);
+            return parsed;
         }
         catch (error) {
-            logger.error('Error parsing analysis response:', error);
             return {
                 rawAnalysis: analysis,
-                error: "Failed to parse analysis response"
+                error: "Failed to parse analysis response",
+                parseError: error instanceof Error ? error.message : String(error)
             };
         }
     }

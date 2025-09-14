@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLinkedInProfile } from '../utils/hooks/useLinkedInProfile';
 import { AIAnalysisSidebar } from './AIAnalysisSidebar';
 import { ExportButtons } from './ExportButtons';
 import { hasCustomLinkedInUrl } from '../utils/aiAnalyzer';
 import { useLanguage, getTranslation } from '../utils/translations';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faRotateRight, faInfoCircle, faWandMagicSparkles, faEdit, faPlay, faStar, faHome } from '@fortawesome/free-solid-svg-icons';
+import gsap from 'gsap';
+import { RefreshLimiter } from '../utils/refreshLimiter';
+import { Tooltip } from './Tooltip';
+import { marked } from 'marked';
+import { AiService } from '../services/aiService';
+import { ContentComparison } from './ContentComparison';
+import { ContentLoadingSkeleton } from './ContentLoadingSkeleton';
+import { WritingAnimation } from './WritingAnimation';
 
 
 export const LinkedInProfileViewer: React.FC = () => {
-  const { profile, loading, error, aiAnalysis, aiLoading, aiError, refreshProfileData } = useLinkedInProfile();
-  const currentLanguage = useLanguage();
+  const { profile, loading, error, aiAnalysis, aiLoading, aiError, scrapedData, refreshProfileData } = useLinkedInProfile();
+  
+  // Log scrapedData for debugging
+  console.log('🔍 [LinkedInProfileViewer] scrapedData from hook:', scrapedData);
+  console.log('🔍 [LinkedInProfileViewer] scrapedData type:', typeof scrapedData);
+  
+  const { language: currentLanguage } = useLanguage();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     basicInfo: true, // Basic info is expanded by default
     about: false,
@@ -54,14 +69,20 @@ export const LinkedInProfileViewer: React.FC = () => {
     }}
     >
       <span className="loader" dir="ltr"></span>
-      <p 
+      <div 
       style={{
         fontSize: '21px',
         fontWeight: '200',
         marginTop: '20px',
-        color: '#6b7280'
+        color: '#6b7280',
+        textAlign: 'center'
       }}
-      >{getTranslation(currentLanguage, 'readingProfile')}...</p>
+      >
+        <WritingAnimation 
+          text={getTranslation(currentLanguage, 'aiAnalyzingProfile')}
+          speed={80}
+        />
+      </div>
     </div>
   }
 
@@ -106,6 +127,7 @@ export const LinkedInProfileViewer: React.FC = () => {
               error={aiError}
               refreshProfileData={refreshProfileData}
               profile={profile}
+              scrapedData={scrapedData}
               cached={cached}
               timestamp={timestamp}
             />

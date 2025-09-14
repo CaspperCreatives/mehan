@@ -54,7 +54,15 @@ class FirebaseRepository {
      */
     async save(data) {
         try {
-            const now = admin.firestore.Timestamp.now();
+            // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+            let now;
+            try {
+                now = admin.firestore.Timestamp.now();
+            }
+            catch (timestampError) {
+                console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+                now = new Date();
+            }
             const docData = Object.assign(Object.assign({}, data), { createdAt: now, updatedAt: now });
             const docRef = await this.db.collection(this.collectionName).add(docData);
             const savedDoc = await docRef.get();
@@ -72,7 +80,15 @@ class FirebaseRepository {
     async saveBatch(dataArray) {
         try {
             const batch = this.db.batch();
-            const now = admin.firestore.Timestamp.now();
+            // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+            let now;
+            try {
+                now = admin.firestore.Timestamp.now();
+            }
+            catch (timestampError) {
+                console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+                now = new Date();
+            }
             const docRefs = [];
             dataArray.forEach((data) => {
                 const docRef = this.db.collection(this.collectionName).doc();
@@ -148,7 +164,16 @@ class FirebaseRepository {
      */
     async update(id, data) {
         try {
-            const updateData = Object.assign(Object.assign({}, data), { updatedAt: admin.firestore.Timestamp.now() });
+            // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+            let now;
+            try {
+                now = admin.firestore.Timestamp.now();
+            }
+            catch (timestampError) {
+                console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+                now = new Date();
+            }
+            const updateData = Object.assign(Object.assign({}, data), { updatedAt: now });
             await this.db.collection(this.collectionName).doc(id).update(updateData);
             // Fetch the updated document
             const updatedDoc = await this.getById(id);
@@ -169,7 +194,15 @@ class FirebaseRepository {
      */
     async saveOrUpdate(id, data) {
         try {
-            const now = admin.firestore.Timestamp.now();
+            // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+            let now;
+            try {
+                now = admin.firestore.Timestamp.now();
+            }
+            catch (timestampError) {
+                console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+                now = new Date();
+            }
             const docRef = this.db.collection(this.collectionName).doc(id);
             const doc = await docRef.get();
             if (doc.exists) {

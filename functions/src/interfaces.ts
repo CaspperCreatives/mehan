@@ -10,6 +10,6 @@ export interface AIAnalysisResponse {
   }
   
   export interface AIRepository {
-    generateText(prompt: string): Promise<string>;
-    analyzeLinkedInProfile(profileData: any): Promise<any>;
+    generateText(prompt: string, language?: string): Promise<string>;
+    analyzeLinkedInProfile(profileData: any, language?: string): Promise<any>;
   }

@@ -50,7 +50,14 @@ export class FirebaseRepository<T extends IBaseEntity> {
    */
   async save(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
     try {
-      const now = admin.firestore.Timestamp.now();
+      // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+      let now: any;
+      try {
+        now = admin.firestore.Timestamp.now();
+      } catch (timestampError) {
+        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+        now = new Date();
+      }
       const docData = {
         ...data,
         createdAt: now,
@@ -77,7 +84,14 @@ export class FirebaseRepository<T extends IBaseEntity> {
   async saveBatch(dataArray: Array<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>): Promise<T[]> {
     try {
       const batch = this.db.batch();
-      const now = admin.firestore.Timestamp.now();
+      // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+      let now: any;
+      try {
+        now = admin.firestore.Timestamp.now();
+      } catch (timestampError) {
+        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+        now = new Date();
+      }
       const docRefs: admin.firestore.DocumentReference[] = [];
 
       dataArray.forEach((data) => {
@@ -178,9 +192,18 @@ export class FirebaseRepository<T extends IBaseEntity> {
    */
   async update(id: string, data: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<T> {
     try {
+      // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+      let now: any;
+      try {
+        now = admin.firestore.Timestamp.now();
+      } catch (timestampError) {
+        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+        now = new Date();
+      }
+      
       const updateData = {
         ...data,
-        updatedAt: admin.firestore.Timestamp.now(),
+        updatedAt: now,
       };
 
       await this.db.collection(this.collectionName).doc(id).update(updateData);
@@ -205,7 +228,14 @@ export class FirebaseRepository<T extends IBaseEntity> {
    */
   async saveOrUpdate(id: string, data: Partial<Omit<T, 'id' | 'createdAt'>>): Promise<T> {
     try {
-      const now = admin.firestore.Timestamp.now();
+      // Fallback to regular Date if admin.firestore.Timestamp.now() is not available
+      let now: any;
+      try {
+        now = admin.firestore.Timestamp.now();
+      } catch (timestampError) {
+        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
+        now = new Date();
+      }
       const docRef = this.db.collection(this.collectionName).doc(id);
       const doc = await docRef.get();
 

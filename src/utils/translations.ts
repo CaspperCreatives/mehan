@@ -29,11 +29,19 @@ export interface Translations {
   backgroundImage: string;
   keywordAnalysis: string;
   strengths: string;
+  weaknesses: string;
+  careerInsight: string;
   areasForImprovement: string;
   industryInsights: string;
   profileOptimization: string;
   competitiveAnalysis: string;
   featured: string;
+  industry: string;
+  company: string;
+  jobTitle: string;
+  occupation: string;
+  connections: string;
+  followers: string;
   
   // Section Details
   criteria: string;
@@ -59,6 +67,15 @@ export interface Translations {
   noProfileOptimizationAvailable: string;
   logo: string;
   
+  // New sections for updated AIAnalysisSidebar
+  rawAnalysis: string;
+  profileScore: string;
+  profileInfo: string;
+  experience: string;
+  noExperienceAvailable: string;
+  noEducationAvailable: string;
+  noSkillsAvailable: string;
+  
   // Popup component
   linkedinProfileScorer: string;
   visitProfileMessage: string;
@@ -67,6 +84,7 @@ export interface Translations {
   
   // LinkedInProfileViewer component
   readingProfile: string;
+  aiAnalyzingProfile: string;
   noProfileDataFound: string;
   notSet: string;
   debugInfo: string;
@@ -152,11 +170,19 @@ export const translations: Record<Language, Translations> = {
     backgroundImage: 'Background Image',
     keywordAnalysis: 'Keyword Analysis',
     strengths: 'Strengths',
+    weaknesses: 'Weaknesses',
+    careerInsight: 'Career Insight',
     areasForImprovement: 'Areas for Improvement',
     industryInsights: 'Industry Insights',
     profileOptimization: 'Profile Optimization',
     competitiveAnalysis: 'Competitive Analysis',
     featured: 'Featured',
+    industry: 'Industry',
+    company: 'Company',
+    jobTitle: 'Job Title',
+    occupation: 'Occupation',
+    connections: 'Connections',
+    followers: 'Followers',
     criteria: 'Criteria',
     analysisRecommendations: 'Analysis Recommendations',
     points: 'pts',
@@ -175,11 +201,21 @@ export const translations: Record<Language, Translations> = {
     noCompetitiveAnalysisAvailable: 'No Competitive Analysis Available',
     noProfileOptimizationAvailable: 'No Profile Optimization Available',
     logo: 'Logo',
+    
+    // New sections for updated AIAnalysisSidebar
+    rawAnalysis: 'Raw Analysis',
+    profileScore: 'Profile Score',
+    profileInfo: 'Profile Information',
+    experience: 'Experience',
+    noExperienceAvailable: 'No experience available',
+    noEducationAvailable: 'No education available',
+    noSkillsAvailable: 'No skills available',
     linkedinProfileScorer: 'LinkedIn Profile Scorer',
     visitProfileMessage: 'Visit Profile Message',
     github: 'GitHub',
     reportIssues: 'Report Issues',
     readingProfile: 'Reading Profile',
+    aiAnalyzingProfile: 'AI is analyzing your profile...',
     noProfileDataFound: 'No Profile Data Found',
     notSet: 'Not Set',
     debugInfo: 'Debug Info',
@@ -255,11 +291,19 @@ export const translations: Record<Language, Translations> = {
     backgroundImage: 'صورة الخلفية',
     keywordAnalysis: 'تحليل الكلمات المفتاحية',
     strengths: 'نقاط القوة',
+    weaknesses: 'نقاط الضعف',
+    careerInsight: 'رؤية مهنية',
     areasForImprovement: 'مجالات التحسين',
     industryInsights: 'رؤى المجال',
     profileOptimization: 'تحسين الملف الشخصي',
     competitiveAnalysis: 'التحليل التنافسي',
     featured: 'المميز',
+    industry: 'المجال',
+    company: 'الشركة',
+    jobTitle: 'المسمى الوظيفي',
+    occupation: 'المهنة',
+    connections: 'العلاقات',
+    followers: 'المتابعون',
     criteria: 'المعايير',
     analysisRecommendations: 'توصيات التحليل',
     points: 'نقاط',
@@ -278,11 +322,21 @@ export const translations: Record<Language, Translations> = {
     noCompetitiveAnalysisAvailable: 'لا يوجد تحليل تنافسي متاح',
     noProfileOptimizationAvailable: 'لا يوجد تحسين ملف شخصي متاح',
     logo: 'شعار',
+    
+    // New sections for updated AIAnalysisSidebar
+    rawAnalysis: 'التحليل الخام',
+    profileScore: 'درجة الملف الشخصي',
+    profileInfo: 'معلومات الملف الشخصي',
+    experience: 'الخبرة',
+    noExperienceAvailable: 'لا توجد خبرة متاحة',
+    noEducationAvailable: 'لا يوجد تعليم متاح',
+    noSkillsAvailable: 'لا توجد مهارات متاحة',
     linkedinProfileScorer: 'مقيم ملف لينكد إن الشخصي',
     visitProfileMessage: 'قم بزيارة أي ملف لينكد إن شخصي لرؤية تقييم الملف والرؤى',
     github: 'جيثب',
     reportIssues: 'الإبلاغ عن المشاكل',
     readingProfile: 'قراءة الملف الشخصي',
+    aiAnalyzingProfile: 'الذكاء الاصطناعي يحلل ملفك الشخصي...',
     noProfileDataFound: 'لم يتم العثور على بيانات الملف الشخصي',
     notSet: 'غير محدد',
     debugInfo: 'معلومات التصحيح',
@@ -343,8 +397,14 @@ export const getTranslation = (language: Language, key: keyof Translations): str
 };
 
 // Hook to get current language based on document direction
-export const useLanguage = (): Language => {
+export const useLanguage = (): { language: Language; toggleLanguage: () => void } => {
   const [language, setLanguage] = useState<Language>(() => {
+    // Check localStorage first for user preference
+    const storedLanguage = localStorage.getItem('preferred-language') as Language;
+    if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'ar')) {
+      return storedLanguage;
+    }
+    
     // Check multiple sources for language detection
     const browserLang = navigator.language || navigator.languages?.[0] || 'en';
     const documentLang = document.documentElement.lang;
@@ -361,6 +421,18 @@ export const useLanguage = (): Language => {
     
     return 'en';
   });
+
+  const toggleLanguage = () => {
+    const newLanguage: Language = language === 'en' ? 'ar' : 'en';
+    setLanguage(newLanguage);
+    
+    // Update document attributes
+    document.documentElement.lang = newLanguage;
+    document.documentElement.dir = newLanguage === 'ar' ? 'rtl' : 'ltr';
+    
+    // Store preference in localStorage
+    localStorage.setItem('preferred-language', newLanguage);
+  };
 
   useEffect(() => {
     const updateLanguage = () => {
@@ -395,5 +467,5 @@ export const useLanguage = (): Language => {
     };
   }, []);
 
-  return language;
+  return { language, toggleLanguage };
 }; 

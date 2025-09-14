@@ -1,3 +1,6 @@
+import { SCORING_CRITERIA } from "./critera";
+
+
 export interface ScoringCriteria {
   section: string;
   criteria: string;
@@ -13,7 +16,7 @@ export interface SectionScore {
   section: string;
   score: number;
   maxScore: number;
-  details: string;
+  details: string[];
 }
 
 export interface ProfileScore {
@@ -25,179 +28,14 @@ export interface ProfileScore {
 }
 
 export class ScoreService {
-  private readonly SCORING_CRITERIA: ScoringCriteria[] = [
-    {
-      section: "linkedInUrl",
-      criteria: "check",
-      max_score: "5"
-    },
-    {
-      section: "country",
-      criteria: "notEmpty",
-      max_score: "5"
-    },
-    {
-      section: "headline",
-      criteria: "length",
-      calculate: {
-        type: "words",
-        min: 10
-      },
-      max_score: "10"
-    },
-    {
-      section: "headline",
-      criteria: "keywords",
-      max_score: "10"
-    },
-    {
-      section: "summary",
-      criteria: "length",
-      calculate: {
-        type: "words",
-        min: 200
-      },
-      max_score: "20"
-    },
-    {
-      section: "summary",
-      criteria: "email",
-      max_score: "10"
-    },
-    {
-      section: "experiences",
-      criteria: "notEmpty",
-      calculate: {
-        section: "description"
-      },
-      max_score: "10"
-    },
-    {
-      section: "experiences",
-      criteria: "length",
-      calculate: {
-        min: 3
-      },
-      max_score: "10"
-    },
-    {
-      section: "education",
-      criteria: "notEmpty",
-      max_score: "10"
-    },
-    {
-      section: "skills",
-      criteria: "length",
-      calculate: {
-        min: 3
-      },
-      max_score: "15"
-    },
-    {
-      section: "publications",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "languages",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "certificates",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "honorsAwards",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "volunteer",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "patents",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "testScores",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "organizations",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "featured",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "projects",
-      criteria: "notEmpty",
-      max_score: "1"
-    },
-    {
-      section: "recommendations",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "causes",
-      criteria: "length",
-      calculate: {
-        min: 1
-      },
-      max_score: "1"
-    },
-    {
-      section: "contactInfo",
-      criteria: "notEmpty",
-      max_score: "1"
-    }
-  ];
+  private readonly SCORING_CRITERIA = SCORING_CRITERIA as ScoringCriteria[];
 
   public calculateProfileScore(profileData: any): ProfileScore {
-    const sectionScores: SectionScore[] = [];
+    const sectionScoresMap = new Map<string, { score: number; maxScore: number; details: string[] }>();
     let totalScore = 0;
     let maxTotalScore = 0;
 
+    // Calculate scores for each criteria and group by section
     for (const criteria of this.SCORING_CRITERIA) {
       const maxScore = parseInt(criteria.max_score);
       maxTotalScore += maxScore;
@@ -205,13 +43,32 @@ export class ScoreService {
       const score = this.calculateSectionScore(profileData, criteria);
       totalScore += score;
       
-      sectionScores.push({
-        section: criteria.section,
-        score: score,
-        maxScore: maxScore,
-        details: this.getScoreDetails(profileData, criteria, score)
-      });
+      const section = criteria.section;
+      const details = this.getScoreDetails(profileData, criteria, score);
+      
+      if (sectionScoresMap.has(section)) {
+        // Section already exists, add to existing scores and details
+        const existing = sectionScoresMap.get(section)!;
+        existing.score += score;
+        existing.maxScore += maxScore;
+        existing.details.push(...details);
+      } else {
+        // New section, create entry
+        sectionScoresMap.set(section, {
+          score: score,
+          maxScore: maxScore,
+          details: details
+        });
+      }
     }
+
+    // Convert map to array format
+    const sectionScores: SectionScore[] = Array.from(sectionScoresMap.entries()).map(([section, data]) => ({
+      section,
+      score: data.score,
+      maxScore: data.maxScore,
+      details: data.details
+    }));
 
     const percentage = Math.round((totalScore / maxTotalScore) * 100);
     const grade = this.calculateGrade(percentage);
@@ -314,12 +171,20 @@ export class ScoreService {
 
   private scoreLinkedInUrl(profileData: any, criteria: ScoringCriteria): number {
     const maxScore = parseInt(criteria.max_score);
-    return profileData.inputUrl ? maxScore : 0;
+    
+    if (!profileData.inputUrl) return 0;
+    
+    // Check if URL is customized (doesn't contain "-" followed by numbers)
+    // Customized URLs look like: linkedin.com/in/johndoe
+    // Non-customized URLs look like: linkedin.com/in/john-doe-123456789
+    const isCustomized = !/-[0-9]+/.test(profileData.inputUrl);
+    
+    return isCustomized ? maxScore : 0;
   }
 
   private scoreCountry(profileData: any, criteria: ScoringCriteria): number {
     const maxScore = parseInt(criteria.max_score);
-    return (profileData.geoCountryName || profileData.countryCode) ? maxScore : 0;
+    return (profileData.geoCountryName || profileData.geoLocationName) ? maxScore : 0;
   }
 
   private scoreHeadlineLength(profileData: any, criteria: ScoringCriteria): number {
@@ -337,7 +202,20 @@ export class ScoreService {
     if (!profileData.headline) return 0;
     
     const headline = profileData.headline.toLowerCase();
-    const keywords = ['developer', 'engineer', 'specialist', 'manager', 'lead', 'senior', 'junior', 'full-stack', 'frontend', 'backend'];
+    const keywords = [
+      // Professional levels
+      'senior', 'junior', 'mid', 'lead', 'principal', 'associate', 'director', 'manager', 'head', 'chief',
+      // Professional roles
+      'specialist', 'expert', 'consultant', 'advisor', 'coordinator', 'supervisor', 'superintendent',
+      // Industry-agnostic skills
+      'analyst', 'strategist', 'planner', 'researcher', 'designer', 'developer', 'engineer', 'architect',
+      // Business functions
+      'marketing', 'sales', 'finance', 'hr', 'operations', 'strategy', 'business', 'commercial',
+      // Technical areas (broad)
+      'digital', 'data', 'analytics', 'research', 'innovation', 'quality', 'compliance', 'risk',
+      // Leadership
+      'team', 'project', 'program', 'initiative', 'transformation', 'change', 'growth', 'development'
+    ];
     const foundKeywords = keywords.filter(keyword => headline.includes(keyword));
     
     return Math.min(foundKeywords.length * 2, maxScore);
@@ -511,25 +389,25 @@ export class ScoreService {
     return hasContactInfo ? maxScore : 0;
   }
 
-  private getScoreDetails(profileData: any, criteria: ScoringCriteria, score: number): string {
+  private getScoreDetails(profileData: any, criteria: ScoringCriteria, score: number): string[] {
     const section = criteria.section;
     const maxScore = parseInt(criteria.max_score);
     
     switch (section) {
       case "linkedInUrl":
-        return profileData.inputUrl ? `LinkedIn URL present (${score}/${maxScore})` : `No LinkedIn URL (${score}/${maxScore})`;
+        return profileData.inputUrl ? [`LinkedIn URL present (${score}/${maxScore})`] : [`No LinkedIn URL (${score}/${maxScore})`];
       
       case "country":
         const country = profileData.geoCountryName || profileData.countryCode;
-        return country ? `Country: ${country} (${score}/${maxScore})` : `No country specified (${score}/${maxScore})`;
+        return country ? [`Country: ${country} (${score}/${maxScore})`] : [`No country specified (${score}/${maxScore})`];
       
       case "headline":
         if (criteria.criteria === "length") {
           const wordCount = profileData.headline ? profileData.headline.trim().split(/\s+/).length : 0;
           const minWords = criteria.calculate?.min || 10;
-          return `Headline: ${wordCount} words (min: ${minWords}) (${score}/${maxScore})`;
+          return [`Headline: ${wordCount} words (min: ${minWords}) (${score}/${maxScore})`];
         } else if (criteria.criteria === "keywords") {
-          return `Headline keywords analysis (${score}/${maxScore})`;
+          return [`Headline keywords analysis (${score}/${maxScore})`];
         }
         break;
       
@@ -537,10 +415,10 @@ export class ScoreService {
         if (criteria.criteria === "length") {
           const wordCount = profileData.summary ? profileData.summary.trim().split(/\s+/).length : 0;
           const minWords = criteria.calculate?.min || 200;
-          return `Summary: ${wordCount} words (min: ${minWords}) (${score}/${maxScore})`;
+          return [`Summary: ${wordCount} words (min: ${minWords}) (${score}/${maxScore})`];
         } else if (criteria.criteria === "email") {
           const hasEmail = profileData.summary && /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/.test(profileData.summary);
-          return hasEmail ? `Email found in summary (${score}/${maxScore})` : `No email in summary (${score}/${maxScore})`;
+          return hasEmail ? [`Email found in summary (${score}/${maxScore})`] : [`No email in summary (${score}/${maxScore})`];
         }
         break;
       
@@ -550,93 +428,93 @@ export class ScoreService {
             pos.title && pos.title.trim().length > 0 && 
             pos.companyName && pos.companyName.trim().length > 0
           );
-          return hasMeaningfulContent ? `Experience content present (${score}/${maxScore})` : `No meaningful experience content (${score}/${maxScore})`;
+          return hasMeaningfulContent ? [`Experience content present (${score}/${maxScore})`] : [`No meaningful experience content (${score}/${maxScore})`];
         } else if (criteria.criteria === "length") {
           const experienceCount = profileData.positions?.length || 0;
           const minCount = criteria.calculate?.min || 3;
-          return `Experiences: ${experienceCount} (min: ${minCount}) (${score}/${maxScore})`;
+          return [`Experiences: ${experienceCount} (min: ${minCount}) (${score}/${maxScore})`];
         }
         break;
       
       case "education":
         const educationCount = profileData.educations?.length || 0;
-        return `Education entries: ${educationCount} (${score}/${maxScore})`;
+        return [`Education entries: ${educationCount} (${score}/${maxScore})`];
       
       case "skills":
         const skillCount = profileData.skills?.length || 0;
         const minCount = criteria.calculate?.min || 3;
-        return `Skills: ${skillCount} (min: ${minCount}) (${score}/${maxScore})`;
+        return [`Skills: ${skillCount} (min: ${minCount}) (${score}/${maxScore})`];
       
       case "publications":
         const publicationCount = profileData.publications?.length || 0;
         const pubMinCount = criteria.calculate?.min || 1;
-        return `Publications: ${publicationCount} (min: ${pubMinCount}) (${score}/${maxScore})`;
+        return [`Publications: ${publicationCount} (min: ${pubMinCount}) (${score}/${maxScore})`];
       
       case "languages":
         const languageCount = profileData.languages?.length || 0;
         const langMinCount = criteria.calculate?.min || 1;
-        return `Languages: ${languageCount} (min: ${langMinCount}) (${score}/${maxScore})`;
+        return [`Languages: ${languageCount} (min: ${langMinCount}) (${score}/${maxScore})`];
       
       case "certificates":
         const certificateCount = profileData.certifications?.length || 0;
         const certMinCount = criteria.calculate?.min || 1;
-        return `Certifications: ${certificateCount} (min: ${certMinCount}) (${score}/${maxScore})`;
+        return [`Certifications: ${certificateCount} (min: ${certMinCount}) (${score}/${maxScore})`];
       
       case "honorsAwards":
         const honorsCount = profileData.honors?.length || 0;
         const honorsMinCount = criteria.calculate?.min || 1;
-        return `Honors/Awards: ${honorsCount} (min: ${honorsMinCount}) (${score}/${maxScore})`;
+        return [`Honors/Awards: ${honorsCount} (min: ${honorsMinCount}) (${score}/${maxScore})`];
       
       case "volunteer":
         const volunteerCount = profileData.volunteerExperiences?.length || 0;
         const volMinCount = criteria.calculate?.min || 1;
-        return `Volunteer experiences: ${volunteerCount} (min: ${volMinCount}) (${score}/${maxScore})`;
+        return [`Volunteer experiences: ${volunteerCount} (min: ${volMinCount}) (${score}/${maxScore})`];
       
       case "patents":
         const patentCount = profileData.patents?.length || 0;
         const patentMinCount = criteria.calculate?.min || 1;
-        return `Patents: ${patentCount} (min: ${patentMinCount}) (${score}/${maxScore})`;
+        return [`Patents: ${patentCount} (min: ${patentMinCount}) (${score}/${maxScore})`];
       
       case "testScores":
         const testScoreCount = profileData.testScores?.length || 0;
         const testMinCount = criteria.calculate?.min || 1;
-        return `Test scores: ${testScoreCount} (min: ${testMinCount}) (${score}/${maxScore})`;
+        return [`Test scores: ${testScoreCount} (min: ${testMinCount}) (${score}/${maxScore})`];
       
       case "organizations":
         const organizationCount = profileData.organizations?.length || 0;
         const orgMinCount = criteria.calculate?.min || 1;
-        return `Organizations: ${organizationCount} (min: ${orgMinCount}) (${score}/${maxScore})`;
+        return [`Organizations: ${organizationCount} (min: ${orgMinCount}) (${score}/${maxScore})`];
       
       case "featured":
         const featuredCount = profileData.featured?.length || 0;
         const featMinCount = criteria.calculate?.min || 1;
-        return `Featured content: ${featuredCount} (min: ${featMinCount}) (${score}/${maxScore})`;
+        return [`Featured content: ${featuredCount} (min: ${featMinCount}) (${score}/${maxScore})`];
       
       case "projects":
         const hasProjects = profileData.projects && profileData.projects.length > 0;
-        return hasProjects ? `Projects present (${score}/${maxScore})` : `No projects (${score}/${maxScore})`;
+        return hasProjects ? [`Projects present (${score}/${maxScore})`] : [`No projects (${score}/${maxScore})`];
       
       case "recommendations":
         const recommendationCount = profileData.recommendations?.length || 0;
         const recMinCount = criteria.calculate?.min || 1;
-        return `Recommendations: ${recommendationCount} (min: ${recMinCount}) (${score}/${maxScore})`;
+        return [`Recommendations: ${recommendationCount} (min: ${recMinCount}) (${score}/${maxScore})`];
       
       case "causes":
         const causeCount = profileData.causes?.length || 0;
         const causeMinCount = criteria.calculate?.min || 1;
-        return `Causes: ${causeCount} (min: ${causeMinCount}) (${score}/${maxScore})`;
+        return [`Causes: ${causeCount} (min: ${causeMinCount}) (${score}/${maxScore})`];
       
       case "contactInfo":
         const hasContactInfo = profileData.followersCount !== undefined || 
                               profileData.connectionsCount !== undefined ||
                               profileData.pictureUrl;
-        return hasContactInfo ? `Contact info present (${score}/${maxScore})` : `No contact info (${score}/${maxScore})`;
+        return hasContactInfo ? [`Contact info present (${score}/${maxScore})`] : [`No contact info (${score}/${maxScore})`];
       
       default:
-        return `${section}: ${score}/${maxScore}`;
+        return [`${section}: ${score}/${maxScore}`];
     }
     
-    return `${section}: ${score}/${maxScore}`;
+    return [`${section}: ${score}/${maxScore}`];
   }
 
   private calculateGrade(percentage: number): string {

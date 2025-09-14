@@ -13,7 +13,7 @@ interface ExportButtonsProps {
 export const ExportButtons: React.FC<ExportButtonsProps> = ({ profile, aiAnalysis, iconOnly = true }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<'image' | 'pdf' | 'shareable' | null>(null);
-  const currentLanguage = useLanguage();
+  const { language: currentLanguage } = useLanguage();
 
   const handleExport = async (type: 'image' | 'pdf' | 'shareable') => {
     if (!profile || !aiAnalysis) {
@@ -24,11 +24,42 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({ profile, aiAnalysi
     setExportType(type);
 
     try {
+      // Robust score extraction across different shapes
+      const score = (
+        aiAnalysis?.overallScore ||
+        aiAnalysis?.totalScore ||
+        aiAnalysis?.score ||
+        aiAnalysis?.profileScore?.totalScore ||
+        aiAnalysis?.data?.profileScore?.totalScore ||
+        0
+      );
+
+      // Resolve profile fields from multiple possible sources
+      const aiProfile = aiAnalysis?.profile?.[0] || aiAnalysis?.data?.profile?.[0] || {};
+      const firstName = aiProfile?.firstName || profile?.basicInfo?.name?.split(' ')?.[0] || profile?.name?.split(' ')?.[0] || '';
+      const lastName = aiProfile?.lastName || (profile?.basicInfo?.name?.split(' ')?.slice(1)?.join(' ') || profile?.name?.split(' ')?.slice(1)?.join(' ') || '');
+      const resolvedName = [firstName, lastName].filter(Boolean).join(' ').trim() || profile?.basicInfo?.name || profile?.name || 'Unknown';
+
+      const resolvedHeadline = (
+        profile?.basicInfo?.headline ||
+        profile?.headline ||
+        aiProfile?.headline ||
+        aiProfile?.occupation ||
+        ''
+      );
+
+      const resolvedImage = (
+        profile?.basicInfo?.profileImage ||
+        profile?.profileImage ||
+        aiProfile?.pictureUrl ||
+        undefined
+      );
+      
       const exportData: ExportData = {
-        name: profile.basicInfo?.name || 'Unknown',
-        score: aiAnalysis.overallScore || 0,
-        headline: profile.basicInfo?.headline || '',
-        profileImage: profile.basicInfo?.profileImage,
+        name: resolvedName,
+        score: score,
+        headline: resolvedHeadline,
+        profileImage: resolvedImage,
         analysisDate: new Date().toLocaleDateString()
       };
 

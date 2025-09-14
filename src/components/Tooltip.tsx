@@ -9,7 +9,7 @@ interface TooltipProps {
 
 export const Tooltip: React.FC<TooltipProps> = ({ children, text, position = 'top' }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const currentLanguage = useLanguage();
+  const { language: currentLanguage } = useLanguage();
   const isRTL = currentLanguage === 'ar';
 
   const getTooltipStyle = () => {

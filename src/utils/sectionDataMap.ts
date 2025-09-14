@@ -3,25 +3,51 @@
  * Used for mapping section names to their corresponding data in the profile object
  */
 export const sectionDataMap: { [key: string]: string } = {
-  'summary': 'about',
-  'experiences': 'experience',
-  'education': 'education',
+  // Core profile sections
+  'summary': 'summary',
+  'headline': 'headline',
+  'experiences': 'positions',
+  'education': 'educations',
   'skills': 'skills',
   'projects': 'projects',
   'recommendations': 'recommendations',
   'publications': 'publications',
   'certificates': 'certifications',
   'languages': 'languages',
-  'volunteer': 'volunteering',
-  'honorsawards': 'honorsAwards',
+  'volunteer': 'volunteerExperiences',
+  'honorsawards': 'honors',
   'patents': 'patents',
   'testscores': 'testScores',
   'organizations': 'organizations',
   'featured': 'featured',
   'contactinfo': 'contactInfo',
-  'headline': 'headline',
   'causes': 'causes',
-  'courses': 'courses'
+  'courses': 'courses',
+  
+  // Additional profile sections
+  'linkedinurl': 'inputUrl',
+  'country': 'geoLocationName',
+  'profilepicture': 'pictureUrl',
+  'backgroundimage': 'backgroundImage',
+  'connections': 'connectionsCount',
+  'followers': 'followersCount',
+  'opentowork': 'openToWork',
+  'industry': 'industryName',
+  'company': 'companyName',
+  'jobtitle': 'jobTitle',
+  'occupation': 'occupation',
+  'firstname': 'firstName',
+  'lastname': 'lastName',
+  'publicidentifier': 'publicIdentifier',
+  'trackingid': 'trackingId',
+  'geourn': 'geoUrn',
+  'industryurn': 'industryUrn',
+  'companypublicid': 'companyPublicId',
+  'companylinkedinurl': 'companyLinkedinUrl',
+  'following': 'following',
+  'followable': 'followable',
+  'connectiontype': 'connectionType',
+  'student': 'student'
 };
 
 /**

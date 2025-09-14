@@ -1,7 +1,14 @@
 import * as logger from "firebase-functions/logger";
 import { IScraperService } from "../interfaces";
+import { OptimizedContentService } from "./optimized-content.service";
+import { generateUserId, extractProfileId, normalizeLinkedInUrl } from "../utils/user-id-generator";
 
 class ScraperService implements IScraperService {
+  private optimizedContentService: OptimizedContentService;
+
+  constructor() {
+    this.optimizedContentService = new OptimizedContentService();
+  }
 
   async scrapeLinkedInProfile(url: string): Promise<any> {
     try {
@@ -26,6 +33,7 @@ class ScraperService implements IScraperService {
 
         logger.info('Starting LinkedIn profile scraping for URL:', url);
         logger.info('Using Apify URL:', apifyUrl);
+        logger.info('Using Apify Token:', apifyToken);
         
         const profileData = await fetch(apifyUrl, {
             method: 'POST',
@@ -65,6 +73,14 @@ class ScraperService implements IScraperService {
           dataKeys: data ? Object.keys(data) : 'null/undefined'
         });
         
+        // Save user and profile data to database
+        try {
+          await this.saveUserAndProfileData(data, url);
+        } catch (saveError) {
+          logger.error('❌ [SCRAPER] Error saving user and profile data:', saveError);
+          // Don't throw the error - this shouldn't break the main flow
+        }
+        
         // Wrap the response in the expected format
         return {
           success: true,
@@ -77,6 +93,77 @@ class ScraperService implements IScraperService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred during scraping'
       };
+    }
+  }
+
+  /**
+   * Save user and profile data to database
+   * @param scrapedData - The scraped profile data from Apify
+   * @param linkedinUrl - The LinkedIn profile URL
+   */
+  private async saveUserAndProfileData(scrapedData: any, linkedinUrl: string): Promise<void> {
+    try {
+      logger.info('🔍 [SCRAPER] Saving user and profile data to database...--------', scrapedData);
+      
+      // Extract profile data from the scraped response
+      // The structure might vary depending on Apify response format
+      let profileData = null;
+
+      
+      if (scrapedData && Array.isArray(scrapedData) && scrapedData.length > 0) {
+        profileData = scrapedData[0];
+      } else if (scrapedData && scrapedData.data && Array.isArray(scrapedData.data) && scrapedData.data.length > 0) {
+        profileData = scrapedData.data[0];
+      } else if (scrapedData && scrapedData.profile && Array.isArray(scrapedData.profile) && scrapedData.profile.length > 0) {
+        profileData = scrapedData.profile[0];
+      } else if (scrapedData && scrapedData.profiles && Array.isArray(scrapedData.profiles) && scrapedData.profiles.length > 0) {
+        profileData = scrapedData.profiles[0];
+      } else {
+        logger.warn('⚠️ [SCRAPER] No profile data found in scraped response');
+        return;
+      }
+      
+      // Extract profile information using utility function
+      const profileId = extractProfileId(profileData);
+      const firstName = profileData?.firstName;
+      const lastName = profileData?.lastName;
+      
+      logger.info('🔍 [SCRAPER] Profile info:', { profileId, firstName, lastName, linkedinUrl });
+      
+      if (!profileId) {
+        logger.warn('⚠️ [SCRAPER] No profile ID found, skipping database save');
+        return;
+      }
+      
+      // Normalize LinkedIn URL
+      const normalizedLinkedInUrl = normalizeLinkedInUrl(linkedinUrl);
+      
+      // Generate a consistent user ID using utility function
+      const userId = generateUserId(profileId, normalizedLinkedInUrl);
+      
+      // Create complete user object
+      const completeUserObject = {
+        userId,
+        profileId,
+        linkedinUrl: normalizedLinkedInUrl,
+        profileData,
+        optimizedContent: [], // Will be populated when user optimizes content
+        totalOptimizations: 0
+        // lastOptimizedAt is optional and will be set when content is optimized
+      };
+      
+      // Save complete user object to database
+      const saved = await this.optimizedContentService.saveCompleteUserObject(completeUserObject);
+      
+      if (saved) {
+        logger.info('✅ [SCRAPER] Complete user object saved to database successfully');
+      } else {
+        logger.error('❌ [SCRAPER] Failed to save complete user object to database');
+      }
+      
+    } catch (error) {
+      logger.error('❌ [SCRAPER] Error saving user and profile data:', error);
+      throw error;
     }
   }
 }

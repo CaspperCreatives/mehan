@@ -22,7 +22,7 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
   profile,
   onClose
 }) => {
-  const currentLanguage = useLanguage();
+  const { language: currentLanguage } = useLanguage();
   const [showCopied, setShowCopied] = useState(false);
 
   const handleCopyContent = async () => {
@@ -135,33 +135,30 @@ export const GeneratedContentBox: React.FC<GeneratedContentBoxProps> = ({
                 } else if (Array.isArray(profile[profileKey])) {
                   // New structure: array of objects - format it nicely
                   const data = profile[profileKey];
-                  if (sectionTitle === 'experiences' || sectionTitle === 'experience') {
+                  if (sectionTitle === 'experiences' || sectionTitle === 'experience' || sectionTitle === 'positions') {
                     // Format experience data
                     originalData = { 
                       content: data.map((exp: any, index: number) => 
                         `${index + 1}. ${exp.title || 'Unknown Position'}\n` +
-                        `   Company: ${exp.company || 'Unknown Company'}\n` +
-                        `   Role: ${exp.role || 'Unknown Role'}\n` +
-                        `   Duration: ${exp.duration || 'Unknown Duration'}\n` +
-                        `   Length: ${exp.length || 'Unknown Length'}\n` +
-                        `   Description: ${exp.description || 'No description provided'}\n`
+                        `   Company: ${exp.companyName || exp.company?.name || 'Unknown Company'}\n` +
+                        `   Location: ${exp.locationName || 'No location specified'}\n` +
+                        `   Duration: ${exp.timePeriod?.startDate?.month}/${exp.timePeriod?.startDate?.year} - ${exp.timePeriod?.endDate ? `${exp.timePeriod.endDate.month}/${exp.timePeriod.endDate.year}` : 'Present'}\n` +
+                        `   Industry: ${exp.company?.industries?.join(', ') || 'No industry specified'}\n`
                       ).join('\n')
                     };
-                  } else if (sectionTitle === 'education') {
+                  } else if (sectionTitle === 'education' || sectionTitle === 'educations') {
                     // Format education data
                     originalData = { 
                       content: data.map((edu: any, index: number) => 
-                        `${index + 1}. ${edu.school || 'Unknown School'}\n` +
-                        `   Degree: ${edu.degree || 'Unknown Degree'}\n` +
-                        `   Field: ${edu.field || 'Unknown Field'}\n` +
-                        `   Duration: ${edu.duration || 'Unknown Duration'}\n`
+                        `${index + 1}. ${edu.schoolName || 'Unknown School'}\n` +
+                        `   Duration: ${edu.timePeriod?.startDate?.year} - ${edu.timePeriod?.endDate?.year || 'Present'}\n`
                       ).join('\n')
                     };
                   } else if (sectionTitle === 'skills') {
                     // Format skills data
                     originalData = { 
                       content: data.map((skill: any, index: number) => 
-                        `${index + 1}. ${skill.name || 'Unknown Skill'} (${skill.endorsements || 0} endorsements)`
+                        `${index + 1}. ${skill}`
                       ).join('\n')
                     };
                   } else if (sectionTitle === 'projects') {

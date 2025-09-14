@@ -945,17 +945,11 @@ export class AIProfileAnalyzer {
    */
   async analyzeProfile(profileData: any, retryCount: number = 0, forceRefresh: boolean = false): Promise<AIAnalysisResult> {
     const maxRetries = 3;
-    const cachedResult = localStorage.getItem(window.location.href);
-
-    if (cachedResult && !forceRefresh) {
-      return JSON.parse(cachedResult);
-    }
 
     try {
       const prompt = this.buildAnalysisPrompt(profileData);
       const response = await this.callAI(prompt);
       const aiResult = this.parseAIResponse(response);
-      localStorage.setItem(window.location.href, JSON.stringify(aiResult));
       return aiResult;
     } catch (error) {
       // Retry logic for certain types of errors

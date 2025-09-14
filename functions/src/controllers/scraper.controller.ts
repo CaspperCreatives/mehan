@@ -33,12 +33,12 @@ export class ScraperController {
   /**
    * Analyze LinkedIn profile with AI
    */
-  async analyzeLinkedInProfile(profileData: any): Promise<any> {
+  async analyzeLinkedInProfile(profileData: any, language?: string): Promise<any> {
     try {
       if (!profileData) {
         throw new Error('Profile data is required');
       }
-      const analysis = await this.aiService.analyzeLinkedInProfile(profileData);
+      const analysis = await this.aiService.analyzeLinkedInProfile(profileData, language);
       
       return analysis;
     } catch (error) {

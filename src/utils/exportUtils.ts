@@ -25,11 +25,11 @@ export class ExportManager {
     canvas.width = 1200;
     canvas.height = 630;
 
-    // Create elegant gradient background
+    // Create blue gradient background
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#667eea'); // Modern purple-blue
-    gradient.addColorStop(0.5, '#764ba2'); // Purple
-    gradient.addColorStop(1, '#f093fb'); // Pink
+    gradient.addColorStop(0, '#0B66C2'); // LinkedIn blue
+    gradient.addColorStop(0.5, '#1E40AF'); // Darker blue
+    gradient.addColorStop(1, '#1E3A8A'); // Deep blue
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -44,9 +44,9 @@ export class ExportManager {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.fillText(data.analysisDate, canvas.width / 2, 70);
 
-    // Add elegant decorative elements
+    // Add elegant decorative elements with blue tones
     // Large subtle circles
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
     ctx.beginPath();
     ctx.arc(canvas.width - 150, 150, 200, 0, 2 * Math.PI);
     ctx.fill();
@@ -56,7 +56,7 @@ export class ExportManager {
     ctx.fill();
 
     // Small accent circles
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.08)';
     ctx.beginPath();
     ctx.arc(100, 100, 50, 0, 2 * Math.PI);
     ctx.fill();
@@ -66,7 +66,7 @@ export class ExportManager {
     ctx.fill();
 
     // Add subtle geometric patterns
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.03)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, canvas.height * 0.3);
@@ -83,47 +83,45 @@ export class ExportManager {
     const scoreY = canvas.height / 2; // Center vertically
     const radius = 180; // Bigger circle
 
-    // Determine score vibe and colors
-    let scoreVibe: 'success' | 'average' | 'bad';
+    // Use blue gradient for all scores
     let progressColor: string;
     let textColor: string;
     
+    // Create blue gradient based on score intensity
     if (data.score >= 75) {
-      scoreVibe = 'success';
-      progressColor = '#22c55e'; // Success green
-      textColor = '#15803d'; // Darker green for text
+      progressColor = '#0B66C2'; // LinkedIn blue
+      textColor = '#1E40AF'; // Darker blue for text
     } else if (data.score >= 25) {
-      scoreVibe = 'average';
-      progressColor = '#eab308'; // Average yellow
-      textColor = '#a16207'; // Darker yellow for text
+      progressColor = '#3B82F6'; // Medium blue
+      textColor = '#1E40AF'; // Darker blue for text
     } else {
-      scoreVibe = 'bad';
-      progressColor = '#ef4444'; // Bad red
-      textColor = '#dc2626'; // Darker red for text
+      progressColor = '#60A5FA'; // Light blue
+      textColor = '#1E40AF'; // Darker blue for text
     }
 
-    // Outer glow effect with vibe color
+    // Outer glow effect with blue color
     const glowGradient = ctx.createRadialGradient(scoreX, scoreY, radius, scoreX, scoreY, radius + 20);
-    glowGradient.addColorStop(0, `${progressColor}40`); // 25% opacity
-    glowGradient.addColorStop(1, `${progressColor}00`); // 0% opacity
+    glowGradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)'); // 40% opacity blue
+    glowGradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)'); // 0% opacity blue
     ctx.fillStyle = glowGradient;
     ctx.beginPath();
     ctx.arc(scoreX, scoreY, radius + 20, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Score circle background with gradient
+    // Score circle background with blue gradient
     const circleGradient = ctx.createRadialGradient(scoreX - 30, scoreY - 30, 0, scoreX, scoreY, radius);
-    circleGradient.addColorStop(0, `${progressColor}30`); // 18% opacity
-    circleGradient.addColorStop(1, `${progressColor}10`); // 6% opacity
+    circleGradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)'); // 30% opacity blue
+    circleGradient.addColorStop(1, 'rgba(59, 130, 246, 0.1)'); // 10% opacity blue
     ctx.fillStyle = circleGradient;
     ctx.beginPath();
     ctx.arc(scoreX, scoreY, radius, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Score circle progress with vibe gradient
+    // Score circle progress with blue gradient
     const progressGradient = ctx.createLinearGradient(scoreX - radius, scoreY - radius, scoreX + radius, scoreY + radius);
     progressGradient.addColorStop(0, progressColor);
-    progressGradient.addColorStop(1, `${progressColor}dd`); // Slightly transparent
+    progressGradient.addColorStop(0.5, '#3B82F6'); // Medium blue
+    progressGradient.addColorStop(1, '#60A5FA'); // Light blue
     
     ctx.beginPath();
     ctx.arc(scoreX, scoreY, radius, -Math.PI / 2, (-Math.PI / 2) + (2 * Math.PI * data.score / 100));
@@ -136,13 +134,13 @@ export class ExportManager {
     ctx.arc(scoreX, scoreY, radius - 15, 0, 2 * Math.PI);
     ctx.fill();
 
-    // Score text with vibe color and shadow
+    // Score text with blue color and shadow
     ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
     ctx.shadowBlur = 10;
     ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 2;
     
-    ctx.fillStyle = textColor;
+    ctx.fillStyle = '#1E40AF'; // Blue color for score
     ctx.font = 'bold 100px Arial, sans-serif'; // Bigger font for bigger circle
     ctx.textAlign = 'center';
     ctx.fillText(`${data.score}%`, scoreX, scoreY + 30);
@@ -153,8 +151,8 @@ export class ExportManager {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-    // Add localized text inside circle with vibe color
-    ctx.fillStyle = `${textColor}cc`; // 80% opacity
+    // Add localized text inside circle with blue color
+    ctx.fillStyle = 'rgba(30, 64, 175, 0.8)'; // 80% opacity blue
     ctx.font = 'bold 20px Arial, sans-serif';
     ctx.textAlign = 'center';
     
@@ -199,7 +197,7 @@ export class ExportManager {
     const margin = 20;
 
     // Add header
-    pdf.setFillColor(11, 102, 194); // LinkedIn blue
+    pdf.setFillColor(30, 64, 175); // Blue color
     pdf.rect(0, 0, pageWidth, 40, 'F');
 
     // Tool name in header
@@ -235,7 +233,7 @@ export class ExportManager {
     // Score circle (simplified as text for PDF)
     pdf.setFontSize(48);
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(11, 102, 194);
+    pdf.setTextColor(30, 64, 175); // Blue color
     pdf.text(`${data.score}%`, pageWidth / 2, 190, { align: 'center' });
 
     // Reset text color

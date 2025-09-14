@@ -3,6 +3,9 @@ import { aiAnalyzer } from '../aiAnalyzer';
 import { AIAnalysisResult } from '../aiAnalyzer';
 import { scraperService } from '../../services/scraper-service';
 import { firebaseRepository } from '../../repositories/firebase-repository';
+import { UserManager } from '../userManager';
+import { OptimizedContentService } from '../../services/optimizedContentService';
+import { generateUserId, extractProfileId, normalizeLinkedInUrl } from '../userIdGenerator';
 
 interface BasicInfo {
   name: string;
@@ -45,6 +48,8 @@ export const useLinkedInProfile = (profileUrl?: string) => {
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [scrapedData, setScrapedData] = useState<any | null>(null);
+  const [optimizedContentService] = useState(() => new OptimizedContentService());
 
   /**
    * Cleans the content by removing the first line (section title)
@@ -58,6 +63,79 @@ export const useLinkedInProfile = (profileUrl?: string) => {
     // Remove the first line (section title) and join the rest
     return lines.slice(1).join('\n').trim();
   };
+
+  /**
+   * Save user and profile data to database
+   * @param profileData - The scraped profile data
+   * @param linkedinUrl - The LinkedIn profile URL
+   */
+  const saveUserAndProfileData = async (profileData: any, linkedinUrl: string) => {
+    try {
+      console.log('🔍 [DEBUG] Saving user and profile data to database...');
+      
+      // Extract profile information using utility function
+      const profileId = extractProfileId(profileData);
+      const firstName = profileData?.firstName;
+      const lastName = profileData?.lastName;
+      
+      console.log('🔍 [DEBUG] Profile info:', { profileId, firstName, lastName, linkedinUrl });
+      
+      if (!profileId) {
+        console.warn('⚠️ [DEBUG] No profile ID found, skipping database save');
+        return;
+      }
+      
+      // Normalize LinkedIn URL
+      const normalizedLinkedInUrl = normalizeLinkedInUrl(linkedinUrl);
+      
+      // Generate a consistent user ID using utility function (matches backend)
+      const userId = generateUserId(profileId, normalizedLinkedInUrl);
+      console.log('🔍 [DEBUG] Generated User ID:', userId);
+      
+      // Update user session with profile information
+      await UserManager.updateUserSessionWithCompleteProfile(profileData, profileId, linkedinUrl);
+      console.log('✅ [DEBUG] User session updated with profile data');
+      
+      // Save complete user object to database
+      const completeUserObject = {
+        userId,
+        profileId,
+        linkedinUrl: normalizedLinkedInUrl,
+        profileData,
+        optimizedContent: [], // Will be populated when user optimizes content
+        totalOptimizations: 0,
+        lastOptimizedAt: undefined
+      };
+      
+      const saveResult = await optimizedContentService.addOptimizedContentToUserSession(
+        {
+          section: 'profile_data',
+          originalContent: 'Profile data from LinkedIn scraping',
+          optimizedContent: 'Profile data saved to database',
+          sectionType: 'profile_data',
+          metadata: {
+            wordCount: 0,
+            characterCount: 0,
+            language: 'en'
+          },
+          optimizedAt: new Date().toISOString()
+        },
+        profileData,
+        profileId,
+        linkedinUrl
+      );
+      
+      if (saveResult) {
+        console.log('✅ [DEBUG] Complete user object saved to database successfully');
+      } else {
+        console.error('❌ [DEBUG] Failed to save complete user object to database');
+      }
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Error saving user and profile data:', error);
+      // Don't throw the error - this shouldn't break the main flow
+    }
+  };
   
   // Use provided URL or fall back to current page URL
   const url = profileUrl || window.location.href;
@@ -68,37 +146,40 @@ export const useLinkedInProfile = (profileUrl?: string) => {
       console.log('🔍 [DEBUG] Force refresh requested:', forceRefresh);
       setAiLoading(true);
       
-      // First check for cached data (unless force refresh is requested)
-      if (!forceRefresh) {
-        try {
-          console.log('🔍 [DEBUG] Checking for cached data...');
-          const cachedResponse = await firebaseRepository.getCachedLinkedInProfile(url);
-          console.log('🔍 [DEBUG] Cached response:', cachedResponse);
-          
-          if (cachedResponse.success && cachedResponse.cached && cachedResponse.data) {
-            console.log('🔍 [DEBUG] Found cached data, using it instead of scraping');
-            setAiAnalysis(cachedResponse.data);
-            setAiLoading(false);
-            return;
-          }
-        } catch (cacheError) {
-          console.log('🔍 [DEBUG] Cache check failed, proceeding with scraping:', cacheError);
-        }
+      // Initialize UserManager with Firebase repository
+      UserManager.setFirebaseRepository(firebaseRepository);
+      
+      // First try to fetch data from database
+      const databaseData = await UserManager.fetchUserDataFromDatabase(url, forceRefresh);
+      
+      if (databaseData && !forceRefresh) {
+        console.log('🔍 [DEBUG] Found data in database, using it');
+        setAiAnalysis(databaseData);
+        setAiLoading(false);
+        return;
       }
       
-      // No cached data found or force refresh requested, proceed with scraping
-      console.log('🔍 [DEBUG] No cached data found, scraping profile...');
+      // No cached data found in database or force refresh requested, proceed with scraping
+      console.log('🔍 [DEBUG] No cached data found in database, scraping profile...');
       console.log('🔍 [DEBUG] Calling scraperService.analyzeLinkedInProfile with URL:', url);
       
-      const scrapedData = await scraperService.analyzeLinkedInProfile(url);
+      // Get current language from document or default to 'en'
+      const currentLanguage = document.documentElement.lang === 'ar' ? 'ar' : 'en';
+      const scrapedData = await scraperService.analyzeLinkedInProfile(url, currentLanguage, forceRefresh);
       console.log('🔍 [DEBUG] Raw scrapedData response:', scrapedData);
       console.log('🔍 [DEBUG] scrapedData.success:', scrapedData?.success);
       console.log('🔍 [DEBUG] scrapedData.data:', scrapedData?.data);
       console.log('🔍 [DEBUG] scrapedData.error:', scrapedData?.error);
       
+      // Store the raw scrapedData for debugging
+      setScrapedData(scrapedData);
+      
       if (scrapedData?.success && scrapedData?.data) {
         console.log('🔍 [DEBUG] Setting AI analysis with data:', scrapedData.data);
         setAiAnalysis(scrapedData.data);
+        
+        // Save scraped data to database and update user session
+        await UserManager.saveScrapedDataToDatabase(scrapedData, url);
       } else {
         console.error('🔍 [DEBUG] Scraped data indicates failure or null data');
         console.error('🔍 [DEBUG] Full scrapedData object:', JSON.stringify(scrapedData, null, 2));
@@ -152,6 +233,7 @@ export const useLinkedInProfile = (profileUrl?: string) => {
   useEffect(() => {
     console.log('🔍 [DEBUG] useLinkedInProfile useEffect triggered');
     console.log('🔍 [DEBUG] URL to scrape:', url);
+    console.log('🔍 [DEBUG] Starting profile scraping and user/profile saving...');
     scrapeProfile();
   }, []);
 
@@ -162,6 +244,7 @@ export const useLinkedInProfile = (profileUrl?: string) => {
     aiAnalysis, 
     aiLoading, 
     aiError,
+    scrapedData,
     refreshProfileData,
     clearCache
   };
