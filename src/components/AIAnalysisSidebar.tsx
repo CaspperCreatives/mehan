@@ -10,11 +10,10 @@ import { RefreshLimiter } from '../utils/refreshLimiter';
 import { Tooltip } from './Tooltip';
 import { marked } from 'marked';
 import { AiService } from '../services/aiService';
-import { ContentComparison } from './ContentComparison';
-import { ContentLoadingSkeleton } from './ContentLoadingSkeleton';
-import { WritingAnimation } from './WritingAnimation';
 import { OptimizedContentService } from '../services/optimizedContentService';
 import { UserManager } from '../utils/userManager';
+
+const sectionHasOptimization = ['skills', 'experiences', 'headline', 'summary'];
 
 interface AIAnalysisSidebarProps {
   analysis: AIAnalysisResult | null;
@@ -310,9 +309,6 @@ const TopHeader: React.FC<{
             alignItems: 'center',
             gap: '6px',
             padding: '6px 12px',
-            backgroundColor: '#f3f4f6',
-            border: '1px solid #d1d5db',
-            borderRadius: '20px',
             fontSize: '12px',
             color: '#374151',
             cursor: 'pointer',
@@ -328,9 +324,6 @@ const TopHeader: React.FC<{
             e.currentTarget.style.borderColor = '#d1d5db';
           }}
         >
-          <span style={{ fontSize: '14px' }}>
-            {currentLanguage === 'en' ? '🇺🇸' : '🇸🇦'}
-          </span>
           <span>{currentLanguage.toUpperCase()}</span>
         </button>
 
@@ -665,7 +658,7 @@ const SectionsSlider: React.FC<{
           {/* Action Buttons */}
           <div className="btns" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px' }}>
             {/* Only show optimize button for specific sections */}
-            {['skills', 'education', 'experiences', 'headline', 'summary'].includes(selectedSection.section?.toLowerCase()) && (
+            {sectionHasOptimization.includes(selectedSection.section?.toLowerCase()) && (
               <Tooltip text={sectionLoading ? "AI is optimizing..." : "AI Optimize Content"}>
                 <button
                   onClick={() => onOptimizeContent(selectedSection)}
@@ -723,7 +716,9 @@ const SectionsSlider: React.FC<{
               </Tooltip>
             )}
           
-            <Tooltip text="Edit on LinkedIn">
+            {/* Only show edit button for specific sections */}
+            {sectionHasOptimization.includes(selectedSection.section?.toLowerCase()) && (
+              <Tooltip text="Edit on LinkedIn">
               <button
                 onClick={() => onEditOnLinkedIn(selectedSection)}
                 style={{
@@ -755,6 +750,7 @@ const SectionsSlider: React.FC<{
                 <FontAwesomeIcon icon={faEdit} style={{ fontSize: '18px' }} />
               </button>
             </Tooltip>
+            )}
           </div>
         </div>
         <div style={{ 
@@ -981,9 +977,12 @@ const SectionsSlider: React.FC<{
             )}
           </div>
         ) : (
-          <div style={{ fontSize: '15px', lineHeight: '1.6', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>
-            {currentLanguage === 'ar' ? 'اضغط على زر التحسين للحصول على محتوى محسن' : 'Click the optimize button to get AI-optimized content'}
-          </div>
+          // Only show the optimize message for sections that can be optimized
+          ['skills', 'education', 'experiences', 'headline', 'summary'].includes(selectedSection.section?.toLowerCase()) && (
+            <div style={{ fontSize: '15px', lineHeight: '1.6', color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>
+              {currentLanguage === 'ar' ? 'اضغط على زر التحسين للحصول على محتوى محسن' : 'Click the optimize button to get AI-optimized content'}
+            </div>
+          )
         )}
       </div>
     </div>
@@ -1581,11 +1580,52 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
   };
 
   const handleEditOnLinkedIn = (section: any) => {
-    // TODO: Implement LinkedIn editing functionality
-    // This could include:
-    // - Opening LinkedIn profile edit page
-    // - Navigating to specific section on LinkedIn
-    // - Opening LinkedIn in new tab/window
+    // Map section names to LinkedIn section IDs
+
+    console.log(section);
+    const sectionIdMap: Record<string, string> = {
+      'summary': 'about',
+      'experiences': 'experience', 
+      'education': 'education',
+      'skills': 'skills',
+      'headline': 'headline',
+    };
+    const sectionId = sectionIdMap[section?.section || section];
+    console.log(sectionId);
+    
+    if (!sectionId) {
+      console.warn('Unknown section:', section);
+      return;
+    }
+
+    // Find the LinkedIn section div with the matching ID
+    let linkedInSection: HTMLElement | null = null;
+
+    if(sectionId === 'headline') {
+       linkedInSection = document.querySelector(`section div.top-card-background-hero-image`);
+    } else {
+      linkedInSection = document.querySelector(`section div#${sectionId}`);
+    }
+
+    if (!linkedInSection) {
+      console.warn(`LinkedIn section with ID '${sectionId}' not found`);
+      return;
+    }
+
+    console.log(linkedInSection);
+
+    // Find the edit button within that section
+    const editButton = linkedInSection.closest('section')?.querySelector('a[href]:has([href*="#edit-medium"])') as HTMLAnchorElement;
+    console.log(editButton);
+
+    
+    if (!editButton) {
+      console.warn(`Edit button not found for section '${sectionId}'`);
+      return;
+    }
+
+    // Click the LinkedIn edit button
+    editButton?.click();
   };
 
   // Effects

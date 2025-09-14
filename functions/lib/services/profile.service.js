@@ -36,53 +36,8 @@ class ProfileService {
      */
     async analyzeProfile(url, language, forceRefresh = false) {
         try {
-            // First, try to get user data from database if not forcing refresh
-            if (!forceRefresh) {
-                try {
-                    // Generate user ID from URL to check if user exists in database
-                    const { normalizeLinkedInUrl } = await import('../utils/user-id-generator.js');
-                    const normalizedUrl = normalizeLinkedInUrl(url);
-                    // Try to find user by LinkedIn URL first
-                    const userByUrl = await this.findUserByLinkedInUrl(normalizedUrl);
-                    if (userByUrl) {
-                        console.log('✅ [BACKEND] Found existing user data in database, returning cached data');
-                        // Load user context
-                        await this.loadUserContext(userByUrl.userId, normalizedUrl);
-                        // Calculate profile score for cached data
-                        const profileScore = await this.calculateProfileScore(userByUrl.profileData);
-                        // Check if we have AI analysis data saved
-                        let analysisData = null;
-                        if (userByUrl.analysisData) {
-                            analysisData = userByUrl.analysisData;
-                        }
-                        else {
-                            // If no analysis data, run AI analysis on cached profile data
-                            console.log('🔍 [BACKEND] No AI analysis found in cached data, running analysis...');
-                            const analysis = await this.scraperController.analyzeLinkedInProfile(userByUrl.profileData, language);
-                            if (analysis.success) {
-                                analysisData = analysis.data;
-                                // Save the analysis data to the user object
-                                await this.saveAnalysisToUser(userByUrl.userId, analysisData);
-                            }
-                        }
-                        // Return the cached data with AI analysis and calculated score
-                        return {
-                            success: true,
-                            data: {
-                                profile: [userByUrl.profileData],
-                                analysis: analysisData || userByUrl.profileData, // Use AI analysis if available
-                                profileScore: profileScore.success ? profileScore.data : null
-                            },
-                            cached: true,
-                            timestamp: userByUrl.updatedAt || userByUrl.createdAt
-                        };
-                    }
-                }
-                catch (dbError) {
-                    console.log('🔍 [BACKEND] No existing user data found, proceeding with scraping:', dbError);
-                }
-            }
-            // If force refresh or no cached data found, proceed with scraping
+            // Always scrape fresh data to prevent data mixing between users
+            console.log('🔍 [BACKEND] Always scraping fresh data to prevent data mixing between users');
             console.log('🔍 [BACKEND] Scraping fresh data from LinkedIn...');
             const profileData = await this.scraperController.scrapeLinkedInProfile(url);
             if (!profileData.success) {
@@ -162,16 +117,15 @@ class ProfileService {
      * @param linkedinUrl - The LinkedIn URL to search for
      * @returns Promise<ICompleteUserObject | null> - The user object or null
      */
-    async findUserByLinkedInUrl(linkedinUrl) {
-        try {
-            // Use the user context service to find user by URL
-            return await user_context_service_1.userContext.findUserByLinkedInUrl(linkedinUrl);
-        }
-        catch (error) {
-            console.error('❌ [BACKEND] Error finding user by LinkedIn URL:', error);
-            return null;
-        }
-    }
+    // private async findUserByLinkedInUrl(linkedinUrl: string): Promise<any> {
+    //   try {
+    //     // Use the user context service to find user by URL
+    //     return await userContext.findUserByLinkedInUrl(linkedinUrl);
+    //   } catch (error) {
+    //     console.error('❌ [BACKEND] Error finding user by LinkedIn URL:', error);
+    //     return null;
+    //   }
+    // }
     /**
      * Save user and profile data to database and set in UserManager
      * @param profileData - The scraped profile data

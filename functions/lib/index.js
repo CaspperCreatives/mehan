@@ -52,6 +52,7 @@ const profile_controller_1 = require("./controllers/profile.controller");
 const ai_controller_1 = require("./controllers/ai.controller");
 const optimized_content_controller_1 = require("./controllers/optimized-content.controller");
 const user_context_service_1 = require("./services/user-context.service");
+const cors_helper_1 = require("./utils/cors-helper");
 admin.initializeApp();
 (0, v2_1.setGlobalOptions)({
     maxInstances: 2,
@@ -61,17 +62,7 @@ admin.initializeApp();
     minInstances: 0,
     concurrency: 5
 });
-exports.scrapeLinkedInProfile = (0, https_1.onRequest)(async (request, response) => {
-    // Set CORS headers
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    response.set('Access-Control-Max-Age', '3600');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+exports.scrapeLinkedInProfile = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const data = request.body;
         // Handle both direct URL format and wrapped data format
@@ -83,35 +74,19 @@ exports.scrapeLinkedInProfile = (0, https_1.onRequest)(async (request, response)
             url = data.data.url;
         }
         else {
-            response.status(400).json({
-                success: false,
-                error: 'URL is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'URL is required', 400);
             return;
         }
         const profileController = new profile_controller_1.ProfileController();
         const result = await profileController.scrapeProfile(url);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.analyzeLinkedInProfile = (0, https_1.onRequest)(async (request, response) => {
+}));
+exports.analyzeLinkedInProfile = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     var _a, _b;
-    // Set comprehensive CORS headers
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, sec-ch-ua, sec-ch-ua-mobile, sec-ch-ua-platform, User-Agent, Referer');
-    response.set('Access-Control-Max-Age', '3600');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
     try {
         const data = request.body;
         // Handle both direct URL format and wrapped data format
@@ -123,62 +98,32 @@ exports.analyzeLinkedInProfile = (0, https_1.onRequest)(async (request, response
             url = data.data.url;
         }
         else {
-            response.status(400).json({
-                success: false,
-                error: 'URL is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'URL is required', 400);
             return;
         }
         const language = data.language || ((_a = data.data) === null || _a === void 0 ? void 0 : _a.language) || 'en';
         const forceRefresh = data.forceRefresh || ((_b = data.data) === null || _b === void 0 ? void 0 : _b.forceRefresh) || false;
         const profileController = new profile_controller_1.ProfileController();
         const result = await profileController.analyzeProfile(url, language, forceRefresh);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.apiTest = (0, https_1.onRequest)(async (request, response) => {
-    // Set CORS headers
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    response.set('Access-Control-Max-Age', '3600');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.apiTest = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
-        response.json({
+        cors_helper_1.CorsHelper.sendCorsResponse(response, {
             message: "API is working",
             timestamp: new Date().toISOString(),
             status: "success"
         });
     }
     catch (error) {
-        response.status(500).json({
-            message: "API test failed",
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
-            timestamp: new Date().toISOString()
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.healthCheck = (0, https_1.onRequest)(async (request, response) => {
-    // Set CORS headers
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    response.set('Access-Control-Max-Age', '3600');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.healthCheck = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         // Basic health check that doesn't depend on external services
         const healthStatus = {
@@ -193,33 +138,38 @@ exports.healthCheck = (0, https_1.onRequest)(async (request, response) => {
                 uptime: process.uptime()
             }
         };
-        response.json(healthStatus);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, healthStatus);
     }
     catch (error) {
-        response.status(500).json({
-            status: "unhealthy",
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
-            timestamp: new Date().toISOString()
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.optimizeContent = (0, https_1.onRequest)(async (request, response) => {
+}));
+exports.optimizeContent = (0, https_1.onRequest)({
+    memory: '256MiB',
+    timeoutSeconds: 300,
+    maxInstances: 10
+}, cors_helper_1.CorsHelper.withCors(async (request, response) => {
     var _a, _b, _c, _d, _e;
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
     try {
+        console.log(`🚀 [OPTIMIZE_CONTENT] Starting optimization request`);
         const data = request.body;
         const content = ((_a = data.data) === null || _a === void 0 ? void 0 : _a.content) || data.content;
         const section = ((_b = data.data) === null || _b === void 0 ? void 0 : _b.section) || data.section;
         const language = ((_c = data.data) === null || _c === void 0 ? void 0 : _c.language) || data.language || 'en';
         const userId = ((_d = data.data) === null || _d === void 0 ? void 0 : _d.userId) || data.userId;
         const linkedinUrl = ((_e = data.data) === null || _e === void 0 ? void 0 : _e.linkedinUrl) || data.linkedinUrl;
+        // Validate required parameters
+        if (!content) {
+            console.error(`❌ [OPTIMIZE_CONTENT] Missing content parameter`);
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Content parameter is required', 400);
+            return;
+        }
+        if (!section) {
+            console.error(`❌ [OPTIMIZE_CONTENT] Missing section parameter`);
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Section parameter is required', 400);
+            return;
+        }
+        console.log(`📝 [OPTIMIZE_CONTENT] Optimizing ${section} content for user: ${userId || 'anonymous'}`);
         // Load user context if userId is provided and section is headline
         if (userId && section === 'headline') {
             try {
@@ -233,283 +183,160 @@ exports.optimizeContent = (0, https_1.onRequest)(async (request, response) => {
         }
         const aiController = new ai_controller_1.AiController();
         try {
+            console.log(`🤖 [OPTIMIZE_CONTENT] Calling AI service for optimization`);
             const result = await aiController.optimizeContent(content, section, language);
-            response.json({
+            console.log(`✅ [OPTIMIZE_CONTENT] Optimization completed successfully`);
+            cors_helper_1.CorsHelper.sendCorsResponse(response, {
                 success: true,
                 data: result,
                 message: 'Content optimized successfully'
             });
         }
         catch (error) {
-            response.status(500).json({
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
+            console.error(`❌ [OPTIMIZE_CONTENT] AI service error:`, error);
+            cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred during optimization', 500);
         }
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        console.error(`❌ [OPTIMIZE_CONTENT] General error:`, error);
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
+}));
 // Optimized Content Management Endpoints
-exports.saveOptimizedContent = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+exports.saveOptimizedContent = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const data = request.body;
         if (!data.userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         if (!data.section) {
-            response.status(400).json({
-                success: false,
-                error: 'Section is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Section is required', 400);
             return;
         }
         if (!data.originalContent) {
-            response.status(400).json({
-                success: false,
-                error: 'Original content is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Original content is required', 400);
             return;
         }
         if (!data.optimizedContent) {
-            response.status(400).json({
-                success: false,
-                error: 'Optimized content is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Optimized content is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.saveOptimizedContent(data);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.getOptimizedContent = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.getOptimizedContent = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const userId = request.query.userId;
         const section = request.query.section;
         if (!userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.getOptimizedContent(userId, section);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.getOptimizedContentById = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.getOptimizedContentById = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const data = request.body;
         const contentId = data.contentId;
         if (!contentId) {
-            response.status(400).json({
-                success: false,
-                error: 'Content ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Content ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.getOptimizedContentById(contentId);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.deleteOptimizedContent = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.deleteOptimizedContent = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const data = request.body;
         const contentId = data.contentId;
         if (!contentId) {
-            response.status(400).json({
-                success: false,
-                error: 'Content ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'Content ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.deleteOptimizedContent(contentId);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.getUserContentStats = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.getUserContentStats = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const userId = request.query.userId;
         if (!userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.getUserContentStats(userId);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
+}));
 // Complete User Object Management Endpoints
-exports.saveCompleteUserObject = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+exports.saveCompleteUserObject = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const data = request.body;
         if (!data.userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.saveCompleteUserObject(data);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.getCompleteUserObject = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.getCompleteUserObject = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const userId = request.query.userId;
         if (!userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.getCompleteUserObject(userId);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
-exports.getUserObjectStats = (0, https_1.onRequest)(async (request, response) => {
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type');
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-        response.status(204).send('');
-        return;
-    }
+}));
+exports.getUserObjectStats = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
     try {
         const userId = request.query.userId;
         if (!userId) {
-            response.status(400).json({
-                success: false,
-                error: 'User ID is required'
-            });
+            cors_helper_1.CorsHelper.sendCorsError(response, 'User ID is required', 400);
             return;
         }
         const controller = new optimized_content_controller_1.OptimizedContentController();
         const result = await controller.getUserObjectStats(userId);
-        response.json(result);
+        cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
-        response.status(500).json({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error occurred'
-        });
+        cors_helper_1.CorsHelper.sendCorsError(response, error instanceof Error ? error.message : 'Unknown error occurred', 500);
     }
-});
+}));
 //# sourceMappingURL=index.js.map

@@ -107,7 +107,7 @@ export const LinkedInProfileViewer: React.FC = () => {
   // Calculate the new score breakdown
 
   return (
-    <div className={`linkedin-profile-viewer-sidebar${isRTL ? ' rtl' : ''}`}>
+    <div className={`linkedin-profile-viewer-sidebar${isRTL ? ' rtl' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="toggle-button">
         <button onClick={() => {
           const sidebar = document.querySelector('#linkedin-profile-scorer-sidebar');

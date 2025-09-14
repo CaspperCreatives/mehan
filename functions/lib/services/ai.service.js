@@ -31,28 +31,41 @@ class AIService {
         }
     }
     async optimizeContent(content, section, language) {
-        if (!section) {
-            section = 'generic';
+        try {
+            if (!section) {
+                section = 'generic';
+            }
+            console.log(`🤖 [AI_SERVICE] Starting content optimization for section: ${section}`);
+            let sectionPrompt;
+            // Use enhanced headline prompt if section is headline and user context is available
+            if (section === 'headline' && this.promptService.hasUserContext()) {
+                console.log(`📝 [AI_SERVICE] Using enhanced headline prompt with user context`);
+                sectionPrompt = await this.promptService.getEnhancedHeadlinePrompt(content);
+            }
+            else {
+                console.log(`📝 [AI_SERVICE] Using standard prompt for section: ${section}`);
+                sectionPrompt = await this.promptService.getSectionPrompt(section);
+            }
+            const prompt = {
+                sectionPrompt: sectionPrompt,
+                content: content,
+            };
+            console.log(`🚀 [AI_SERVICE] Calling OpenAI API for content generation`);
+            const optimizedContent = await this.aiRepo.generateText(JSON.stringify(prompt), language);
+            console.log(`✅ [AI_SERVICE] Content optimization completed successfully`);
+            // Clear large objects from memory
+            sectionPrompt = undefined;
+            return {
+                originalContent: content,
+                optimizedContent: optimizedContent,
+                section: section,
+                timestamp: new Date().toISOString()
+            };
         }
-        let sectionPrompt;
-        // Use enhanced headline prompt if section is headline and user context is available
-        if (section === 'headline' && this.promptService.hasUserContext()) {
-            sectionPrompt = await this.promptService.getEnhancedHeadlinePrompt(content);
+        catch (error) {
+            console.error(`❌ [AI_SERVICE] Error during content optimization:`, error);
+            throw error;
         }
-        else {
-            sectionPrompt = await this.promptService.getSectionPrompt(section);
-        }
-        const prompt = {
-            sectionPrompt: sectionPrompt,
-            content: content,
-        };
-        const optimizedContent = await this.aiRepo.generateText(JSON.stringify(prompt), language);
-        return {
-            originalContent: content,
-            optimizedContent: optimizedContent,
-            section: section,
-            timestamp: new Date().toISOString()
-        };
     }
 }
 exports.AIService = AIService;

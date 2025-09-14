@@ -149,23 +149,13 @@ export const useLinkedInProfile = (profileUrl?: string) => {
       // Initialize UserManager with Firebase repository
       UserManager.setFirebaseRepository(firebaseRepository);
       
-      // First try to fetch data from database
-      const databaseData = await UserManager.fetchUserDataFromDatabase(url, forceRefresh);
-      
-      if (databaseData && !forceRefresh) {
-        console.log('🔍 [DEBUG] Found data in database, using it');
-        setAiAnalysis(databaseData);
-        setAiLoading(false);
-        return;
-      }
-      
-      // No cached data found in database or force refresh requested, proceed with scraping
-      console.log('🔍 [DEBUG] No cached data found in database, scraping profile...');
+      // Always scrape fresh data - no database caching to prevent data mixing
+      console.log('🔍 [DEBUG] Always scraping fresh data to prevent data mixing between users');
       console.log('🔍 [DEBUG] Calling scraperService.analyzeLinkedInProfile with URL:', url);
       
       // Get current language from document or default to 'en'
       const currentLanguage = document.documentElement.lang === 'ar' ? 'ar' : 'en';
-      const scrapedData = await scraperService.analyzeLinkedInProfile(url, currentLanguage, forceRefresh);
+      const scrapedData = await scraperService.analyzeLinkedInProfile(url, currentLanguage, true); // Always force refresh
       console.log('🔍 [DEBUG] Raw scrapedData response:', scrapedData);
       console.log('🔍 [DEBUG] scrapedData.success:', scrapedData?.success);
       console.log('🔍 [DEBUG] scrapedData.data:', scrapedData?.data);

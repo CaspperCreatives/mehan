@@ -145,6 +145,29 @@ export interface Translations {
   copyToClipboard: string;
   generatingContent: string;
   clickGenerateButton: string;
+
+  // Consent page
+  dataConsentTitle: string;
+  dataConsentSubtitle: string;
+  whatWeCollect: string;
+  publicProfileData: string;
+  workExperience: string;
+  educationHistory: string;
+  skillsAndEndorsements: string;
+  publicPostsAndActivity: string;
+  howWeUseData: string;
+  aiAnalysisPurpose: string;
+  careerRecommendations: string;
+  performanceInsights: string;
+  dataProtection: string;
+  localProcessing: string;
+  noThirdPartySharing: string;
+  dataRetention: string;
+  userControl: string;
+  importantNote: string;
+  consentNote: string;
+  iUnderstandAndAccept: string;
+  continue: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -267,7 +290,30 @@ export const translations: Record<Language, Translations> = {
     copied: 'Copied!',
     copyToClipboard: 'Copy to Clipboard',
     generatingContent: 'Generating content...',
-    clickGenerateButton: 'Click to generate content'
+    clickGenerateButton: 'Click to generate content',
+
+    // Consent page
+    dataConsentTitle: 'Data Collection Consent',
+    dataConsentSubtitle: 'We need your permission to analyze your LinkedIn profile data',
+    whatWeCollect: 'What We Collect',
+    publicProfileData: 'Public profile information (name, headline, summary)',
+    workExperience: 'Work experience and job history',
+    educationHistory: 'Education background and qualifications',
+    skillsAndEndorsements: 'Skills and endorsements',
+    publicPostsAndActivity: 'Public posts and activity (if visible)',
+    howWeUseData: 'How We Use Your Data',
+    aiAnalysisPurpose: 'AI-powered profile analysis and scoring',
+    careerRecommendations: 'Personalized career recommendations',
+    performanceInsights: 'Profile performance insights and suggestions',
+    dataProtection: 'Data Protection & Privacy',
+    localProcessing: 'Data is processed locally on your device',
+    noThirdPartySharing: 'No data is shared with third parties',
+    dataRetention: 'Data is only stored temporarily for analysis',
+    userControl: 'You can revoke consent at any time',
+    importantNote: 'Important',
+    consentNote: 'This extension only accesses publicly available LinkedIn data. We do not access private information or require login credentials.',
+    iUnderstandAndAccept: 'I understand and accept the data collection terms',
+    continue: 'Continue'
   },
   ar: {
     upgradeToPremium: 'ترقية الى برينيوم',
@@ -388,7 +434,30 @@ export const translations: Record<Language, Translations> = {
     copied: 'تم النسخ!',
     copyToClipboard: 'نسخ إلى الحافظة',
     generatingContent: 'جاري إنشاء المحتوى...',
-    clickGenerateButton: 'انقر لإنشاء المحتوى'
+    clickGenerateButton: 'انقر لإنشاء المحتوى',
+
+    // Consent page
+    dataConsentTitle: 'موافقة جمع البيانات',
+    dataConsentSubtitle: 'نحتاج إذنك لتحليل بيانات ملفك الشخصي على LinkedIn',
+    whatWeCollect: 'ما نجمع',
+    publicProfileData: 'معلومات الملف الشخصي العامة (الاسم، العنوان، الملخص)',
+    workExperience: 'الخبرة العملية وتاريخ الوظائف',
+    educationHistory: 'الخلفية التعليمية والمؤهلات',
+    skillsAndEndorsements: 'المهارات والتوصيات',
+    publicPostsAndActivity: 'المنشورات العامة والنشاط (إذا كانت مرئية)',
+    howWeUseData: 'كيف نستخدم بياناتك',
+    aiAnalysisPurpose: 'تحليل وتسجيل الملف الشخصي بالذكاء الاصطناعي',
+    careerRecommendations: 'توصيات مهنية مخصصة',
+    performanceInsights: 'رؤى أداء الملف الشخصي والاقتراحات',
+    dataProtection: 'حماية البيانات والخصوصية',
+    localProcessing: 'يتم معالجة البيانات محلياً على جهازك',
+    noThirdPartySharing: 'لا يتم مشاركة البيانات مع أطراف ثالثة',
+    dataRetention: 'يتم تخزين البيانات مؤقتاً فقط للتحليل',
+    userControl: 'يمكنك إلغاء الموافقة في أي وقت',
+    importantNote: 'مهم',
+    consentNote: 'هذا الامتداد يصل فقط إلى البيانات العامة المتاحة على LinkedIn. نحن لا نصل إلى المعلومات الخاصة أو نحتاج إلى بيانات تسجيل الدخول.',
+    iUnderstandAndAccept: 'أفهم وأوافق على شروط جمع البيانات',
+    continue: 'متابعة'
   }
 };
 

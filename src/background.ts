@@ -22,19 +22,21 @@ chrome.runtime.onMessage.addListener((
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) => {
+  // Removed localStorage dependency - all data should come from database only
+  // This prevents data mixing between users
+  console.log('🔍 [BACKGROUND] Message received:', request.type);
+  
   if (request.type === 'PROFILE_DATA' && request.profileId && request.data) {
-    // Store profile data in extension storage
-    chrome.storage.local.set({ [request.profileId]: request.data }, () => {
-      sendResponse({ success: true });
-    });
-    return true; // Required for async sendResponse
+    // Data is now handled directly by the database - no local storage
+    console.log('🔍 [BACKGROUND] Profile data received, handled by database');
+    sendResponse({ success: true });
+    return true;
   }
   
   if (request.type === 'GET_PROFILE_DATA' && request.profileId) {
-    // Retrieve stored profile data
-    chrome.storage.local.get([request.profileId], (result: { [key: string]: any }) => {
-      sendResponse(result[request.profileId as string] || null);
-    });
-    return true; // Required for async sendResponse
+    // Data should be retrieved from database only
+    console.log('🔍 [BACKGROUND] Profile data request - use database instead of localStorage');
+    sendResponse(null);
+    return true;
   }
 }); 

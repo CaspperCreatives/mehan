@@ -72,52 +72,21 @@ export class UserManager {
   }
 
   /**
-   * Fetch user data from database first, then scrape if no data found
+   * Always return null to force fresh scraping - no database caching to prevent data mixing
    * @param profileUrl - LinkedIn profile URL
    * @param forceRefresh - Whether to force refresh the data
-   * @returns Promise<any> - User profile data
+   * @returns Promise<any> - Always returns null to force fresh data
    */
   static async fetchUserDataFromDatabase(profileUrl: string, forceRefresh: boolean = false): Promise<any> {
     try {
-      console.log('🔍 [DEBUG] Fetching user data from database for URL:', profileUrl);
+      console.log('🔍 [DEBUG] Skipping database cache to prevent data mixing between users');
+      console.log('🔍 [DEBUG] Will always scrape fresh data for URL:', profileUrl);
       
-      if (!this.firebaseRepository) {
-        console.warn('Firebase repository not initialized');
-        return null;
-      }
-
-      // First try to get cached data from database
-      if (!forceRefresh) {
-        try {
-          console.log('🔍 [DEBUG] Checking for cached data in database...');
-          const cachedResponse = await this.firebaseRepository.getCachedLinkedInProfile(profileUrl);
-          console.log('🔍 [DEBUG] Database cached response:', cachedResponse);
-          
-          if (cachedResponse.success && cachedResponse.cached && cachedResponse.data) {
-            console.log('🔍 [DEBUG] Found cached data in database, using it');
-            
-            // Update user session with database data
-            const profileData = cachedResponse.data.profile?.[0] || cachedResponse.data.data?.profile?.[0];
-            if (profileData) {
-              await this.updateUserSessionWithCompleteProfile(
-                profileData, 
-                profileData.profileId || 'unknown', 
-                profileUrl
-              );
-            }
-            
-            return cachedResponse.data;
-          }
-        } catch (dbError) {
-          console.log('🔍 [DEBUG] Database fetch failed, will proceed with scraping:', dbError);
-        }
-      }
-
-      // No cached data found, need to scrape
-      console.log('🔍 [DEBUG] No cached data found in database, will need to scrape');
+      // Always return null to force fresh scraping
+      // This prevents data mixing between different users
       return null;
     } catch (error) {
-      console.error('Error fetching user data from database:', error);
+      console.error('Error in fetchUserDataFromDatabase:', error);
       return null;
     }
   }
@@ -204,25 +173,37 @@ export class UserManager {
    */
   static async updateUserSessionWithCompleteProfile(profileData: any, profileId: string, linkedinUrl: string): Promise<void> {
     try {
+      // Clear any existing user data to prevent mixing
+      this.clearUserSession();
+      
       const userId = await this.getOrCreateUserId();
-      const existingSession = await this.getCurrentUserSession();
       
       const session: UserSession = {
         userId,
-        createdAt: existingSession?.createdAt || new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         lastActiveAt: new Date().toISOString(),
         profileId,
         linkedinUrl,
         profileData,
-        optimizedContent: existingSession?.optimizedContent || [],
-        totalOptimizations: existingSession?.totalOptimizations || 0,
-        lastOptimizedAt: existingSession?.lastOptimizedAt
+        optimizedContent: [], // Start fresh - no mixing with previous user's data
+        totalOptimizations: 0,
+        lastOptimizedAt: undefined
       };
       
       this.currentUserSession = session;
+      console.log('✅ [USER_MANAGER] User session updated with fresh data for:', profileId);
     } catch (error) {
       console.error('Error updating user session with complete profile:', error);
     }
+  }
+
+  /**
+   * Clear user session to prevent data mixing between users
+   */
+  static clearUserSession(): void {
+    console.log('🧹 [USER_MANAGER] Clearing user session to prevent data mixing');
+    this.currentUserSession = null;
+    this.currentUserId = null;
   }
 
   /**
