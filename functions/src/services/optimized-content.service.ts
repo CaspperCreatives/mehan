@@ -1,3 +1,4 @@
+import { logger } from 'firebase-functions';
 import { OptimizedContentRepository, IOptimizedContent, CompleteUserObjectRepository, ICompleteUserObject } from '../repositories/optimized-content.repository';
 
 export class OptimizedContentService {
@@ -37,7 +38,6 @@ export class OptimizedContentService {
 
       const savedContent = await this.repository.saveOptimizedContent(contentData);
       
-      console.log(`✅ [BACKEND] Optimized content saved for user ${contentData.userId}, section: ${contentData.section}`);
       
       return savedContent;
     } catch (error) {
@@ -66,7 +66,6 @@ export class OptimizedContentService {
         content = await this.repository.findByUserId(userId);
       }
 
-      console.log(`✅ [BACKEND] Retrieved ${content.length} optimized content items for user ${userId}`);
       
       return content;
     } catch (error) {
@@ -89,9 +88,7 @@ export class OptimizedContentService {
       const content = await this.repository.getById(contentId);
       
       if (content) {
-        console.log(`✅ [BACKEND] Retrieved optimized content by ID: ${contentId}`);
       } else {
-        console.log(`⚠️ [BACKEND] Optimized content not found for ID: ${contentId}`);
       }
       
       return content;
@@ -115,9 +112,7 @@ export class OptimizedContentService {
       const success = await this.repository.deleteOptimizedContent(contentId);
       
       if (success) {
-        console.log(`✅ [BACKEND] Deleted optimized content: ${contentId}`);
       } else {
-        console.log(`⚠️ [BACKEND] Failed to delete optimized content: ${contentId}`);
       }
       
       return success;
@@ -144,7 +139,6 @@ export class OptimizedContentService {
 
       const stats = await this.repository.getUserContentStats(userId);
       
-      console.log(`✅ [BACKEND] Retrieved content stats for user ${userId}:`, stats);
       
       return stats;
     } catch (error) {
@@ -188,12 +182,9 @@ export class OptimizedContentService {
       }
 
       const savedUserObject = await this.completeUserRepository.saveOrUpdateCompleteUserObject(userObject);
-      
-      console.log(`✅ [BACKEND] Complete user object saved for user ${userObject.userId}`);
-      
       return savedUserObject;
     } catch (error) {
-      console.error('❌ [BACKEND] Error saving complete user object:', error);
+      logger.error('❌ [BACKEND] Error saving complete user object:', error);
       throw error;
     }
   }
@@ -212,9 +203,7 @@ export class OptimizedContentService {
       const userObject = await this.completeUserRepository.findByUserId(userId);
       
       if (userObject) {
-        console.log(`✅ [BACKEND] Retrieved complete user object for user ${userId}`);
       } else {
-        console.log(`⚠️ [BACKEND] No complete user object found for user ${userId}`);
       }
       
       return userObject;
@@ -242,7 +231,6 @@ export class OptimizedContentService {
 
       const stats = await this.completeUserRepository.getUserObjectStats(userId);
       
-      console.log(`✅ [BACKEND] Retrieved user object stats for user ${userId}:`, stats);
       
       return stats;
     } catch (error) {
@@ -265,9 +253,7 @@ export class OptimizedContentService {
       const userObject = await this.completeUserRepository.findByLinkedInUrl(linkedinUrl);
       
       if (userObject) {
-        console.log(`✅ [BACKEND] Retrieved user object by LinkedIn URL: ${linkedinUrl}`);
       } else {
-        console.log(`⚠️ [BACKEND] No user object found for LinkedIn URL: ${linkedinUrl}`);
       }
       
       return userObject;

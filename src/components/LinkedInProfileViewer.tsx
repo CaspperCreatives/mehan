@@ -20,8 +20,6 @@ export const LinkedInProfileViewer: React.FC = () => {
   const { profile, loading, error, aiAnalysis, aiLoading, aiError, scrapedData, refreshProfileData } = useLinkedInProfile();
   
   // Log scrapedData for debugging
-  console.log('🔍 [LinkedInProfileViewer] scrapedData from hook:', scrapedData);
-  console.log('🔍 [LinkedInProfileViewer] scrapedData type:', typeof scrapedData);
   
   const { language: currentLanguage } = useLanguage();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({

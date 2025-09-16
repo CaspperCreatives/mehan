@@ -27,6 +27,17 @@ export interface UserSession {
   optimizedContent?: OptimizedContentData[]; // Array of all optimized content
   totalOptimizations?: number;
   lastOptimizedAt?: string;
+  optimizationLimit?: {
+    remainingOptimizations: number;
+    hasOptimized: boolean;
+    optimizedSection?: string;
+    optimizedAt?: string;
+  };
+  refreshLimit?: {
+    remainingRefreshes: number;
+    lastRefreshDate: string;
+    totalRefreshes: number;
+  };
 }
 
 export class UserManager {
@@ -39,6 +50,20 @@ export class UserManager {
    */
   static setFirebaseRepository(repository: any): void {
     this.firebaseRepository = repository;
+  }
+
+  /**
+   * Get existing userId from localStorage for a given URL
+   * @param linkedinUrl - LinkedIn profile URL
+   * @returns string | null - Existing userId or null if not found
+   */
+  static getExistingUserIdFromStorage(linkedinUrl: string): string | null {
+    try {
+      const storedUserId = localStorage.getItem(`linkedin-user-id-${linkedinUrl}`);
+      return storedUserId;
+    } catch (error) {
+      return null;
+    }
   }
 
   /**
@@ -65,70 +90,50 @@ export class UserManager {
       
       return newUserId;
     } catch (error) {
-      console.error('Error getting or creating user ID:', error);
       // Fallback to generating a new ID
       return this.generateUserId();
     }
   }
 
   /**
-   * Always return null to force fresh scraping - no database caching to prevent data mixing
+   * Fetch user data from database using stored user ID
    * @param profileUrl - LinkedIn profile URL
    * @param forceRefresh - Whether to force refresh the data
-   * @returns Promise<any> - Always returns null to force fresh data
+   * @returns Promise<any> - User data from database or null if not found
    */
   static async fetchUserDataFromDatabase(profileUrl: string, forceRefresh: boolean = false): Promise<any> {
     try {
-      console.log('🔍 [DEBUG] Skipping database cache to prevent data mixing between users');
-      console.log('🔍 [DEBUG] Will always scrape fresh data for URL:', profileUrl);
       
-      // Always return null to force fresh scraping
-      // This prevents data mixing between different users
-      return null;
-    } catch (error) {
-      console.error('Error in fetchUserDataFromDatabase:', error);
-      return null;
-    }
-  }
+      if (forceRefresh) {
+        return null;
+      }
 
-  /**
-   * Save scraped data to database and update user session
-   * @param scrapedData - Scraped profile data
-   * @param profileUrl - LinkedIn profile URL
-   */
-  static async saveScrapedDataToDatabase(scrapedData: any, profileUrl: string): Promise<void> {
-    try {
-      console.log('🔍 [DEBUG] Saving scraped data to database...');
+      const storedUserId = localStorage.getItem(`linkedin-user-id-${profileUrl}`);
       
+      if (!storedUserId) {
+        return null;
+      }
+
       if (!this.firebaseRepository) {
-        console.warn('Firebase repository not initialized, cannot save to database');
-        return;
+        return null;
       }
 
-      // Extract profile data
-      const profileData = scrapedData.data?.profile?.[0] || scrapedData.profile?.[0];
-      if (profileData) {
-        console.log('🔍 [DEBUG] Profile data found, saving to database...');
+      try {
+        const userData = await this.firebaseRepository.getCompleteUserObject(storedUserId);
         
-        // Update user session with complete profile
-        await this.updateUserSessionWithCompleteProfile(
-          profileData, 
-          profileData.profileId || 'unknown', 
-          profileUrl
-        );
-        
-        // Save to database via Firebase repository
-        try {
-          await this.firebaseRepository.saveLinkedInProfile(profileUrl, scrapedData.data);
-          console.log('✅ Profile data saved to database');
-        } catch (saveError) {
-          console.error('❌ Error saving profile data to database:', saveError);
+        if (userData && userData.success && userData.data) {
+          return userData.data;
+        } else {
+          return null;
         }
+      } catch (dbError) {
+        return null;
       }
     } catch (error) {
-      console.error('Error saving scraped data to database:', error);
+      return null;
     }
   }
+
 
   /**
    * Get the current user session
@@ -138,7 +143,6 @@ export class UserManager {
     try {
       return this.currentUserSession;
     } catch (error) {
-      console.error('Error getting user session:', error);
       return null;
     }
   }
@@ -161,7 +165,6 @@ export class UserManager {
       
       this.currentUserSession = session;
     } catch (error) {
-      console.error('Error updating user session with profile:', error);
     }
   }
 
@@ -173,10 +176,18 @@ export class UserManager {
    */
   static async updateUserSessionWithCompleteProfile(profileData: any, profileId: string, linkedinUrl: string): Promise<void> {
     try {
-      // Clear any existing user data to prevent mixing
-      this.clearUserSession();
+      const existingUserId = this.getExistingUserIdFromStorage(linkedinUrl);
+      let userId: string;
       
-      const userId = await this.getOrCreateUserId();
+      if (existingUserId) {
+        userId = existingUserId;
+        this.currentUserId = userId; 
+      } else {
+        userId = await this.getOrCreateUserId();
+      }
+      
+      // Get existing session to preserve optimization and refresh limits
+      const existingSession = await this.getCurrentUserSession();
       
       const session: UserSession = {
         userId,
@@ -185,15 +196,24 @@ export class UserManager {
         profileId,
         linkedinUrl,
         profileData,
-        optimizedContent: [], // Start fresh - no mixing with previous user's data
-        totalOptimizations: 0,
-        lastOptimizedAt: undefined
+        optimizedContent: existingSession?.optimizedContent || [], // Preserve existing optimized content
+        totalOptimizations: existingSession?.totalOptimizations || 0,
+        lastOptimizedAt: existingSession?.lastOptimizedAt,
+        optimizationLimit: existingSession?.optimizationLimit || { // Preserve existing optimization limit
+          remainingOptimizations: 1,
+          hasOptimized: false,
+          optimizedSection: undefined,
+          optimizedAt: undefined
+        },
+        refreshLimit: existingSession?.refreshLimit || { // Preserve existing refresh limit
+          remainingRefreshes: 2,
+          lastRefreshDate: new Date().toDateString(),
+          totalRefreshes: 0
+        }
       };
       
       this.currentUserSession = session;
-      console.log('✅ [USER_MANAGER] User session updated with fresh data for:', profileId);
     } catch (error) {
-      console.error('Error updating user session with complete profile:', error);
     }
   }
 
@@ -201,7 +221,6 @@ export class UserManager {
    * Clear user session to prevent data mixing between users
    */
   static clearUserSession(): void {
-    console.log('🧹 [USER_MANAGER] Clearing user session to prevent data mixing');
     this.currentUserSession = null;
     this.currentUserId = null;
   }
@@ -212,13 +231,13 @@ export class UserManager {
    */
   static async addOptimizedContentToSession(optimizedContent: OptimizedContentData): Promise<void> {
     try {
-      const userId = await this.getOrCreateUserId();
       const existingSession = await this.getCurrentUserSession();
       
       if (!existingSession) {
-        console.error('No existing user session found');
         return;
       }
+
+      const userId = existingSession.userId;
 
       // Check if content for this section already exists and update it, or add new
       const updatedOptimizedContent = existingSession.optimizedContent || [];
@@ -243,9 +262,7 @@ export class UserManager {
       };
       
       this.currentUserSession = updatedSession;
-      console.log('✅ User session updated with optimized content');
     } catch (error) {
-      console.error('Error adding optimized content to session:', error);
     }
   }
 
@@ -258,7 +275,6 @@ export class UserManager {
       const session = await this.getCurrentUserSession();
       return session?.optimizedContent || [];
     } catch (error) {
-      console.error('Error getting optimized content:', error);
       return [];
     }
   }
@@ -273,7 +289,6 @@ export class UserManager {
       const allContent = await this.getAllOptimizedContent();
       return allContent.find(content => content.section === section) || null;
     } catch (error) {
-      console.error('Error getting optimized content for section:', error);
       return null;
     }
   }
@@ -286,16 +301,11 @@ export class UserManager {
     try {
       const session = await this.getCurrentUserSession();
       if (!session) {
-        console.error('No user session found to save');
         return false;
       }
 
-      // This will be implemented in the optimized content service
-      // For now, just log the complete user object
-      console.log('Complete user object to save:', session);
       return true;
     } catch (error) {
-      console.error('Error saving complete user object:', error);
       return false;
     }
   }
@@ -308,7 +318,6 @@ export class UserManager {
     try {
       return this.currentUserId;
     } catch (error) {
-      console.error('Error getting stored user ID:', error);
       return null;
     }
   }
@@ -321,7 +330,6 @@ export class UserManager {
     try {
       this.currentUserId = userId;
     } catch (error) {
-      console.error('Error storing user ID:', error);
     }
   }
 
@@ -339,7 +347,6 @@ export class UserManager {
       
       this.currentUserSession = session;
     } catch (error) {
-      console.error('Error creating user session:', error);
     }
   }
 
@@ -358,7 +365,6 @@ export class UserManager {
         this.currentUserSession = updatedSession;
       }
     } catch (error) {
-      console.error('Error updating user session:', error);
     }
   }
 
@@ -367,7 +373,6 @@ export class UserManager {
    * @returns string - A unique user ID
    */
   private static generateUserId(): string {
-    // Generate a UUID-like string
     const timestamp = Date.now().toString(36);
     const randomPart = Math.random().toString(36).substring(2, 15);
     const randomPart2 = Math.random().toString(36).substring(2, 15);
@@ -383,7 +388,6 @@ export class UserManager {
       this.currentUserId = null;
       this.currentUserSession = null;
     } catch (error) {
-      console.error('Error clearing user data:', error);
     }
   }
 

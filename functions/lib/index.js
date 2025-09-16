@@ -86,10 +86,9 @@ exports.scrapeLinkedInProfile = (0, https_1.onRequest)(cors_helper_1.CorsHelper.
     }
 }));
 exports.analyzeLinkedInProfile = (0, https_1.onRequest)(cors_helper_1.CorsHelper.withCors(async (request, response) => {
-    var _a, _b;
+    var _a, _b, _c;
     try {
         const data = request.body;
-        // Handle both direct URL format and wrapped data format
         let url;
         if (data && data.url) {
             url = data.url;
@@ -103,8 +102,9 @@ exports.analyzeLinkedInProfile = (0, https_1.onRequest)(cors_helper_1.CorsHelper
         }
         const language = data.language || ((_a = data.data) === null || _a === void 0 ? void 0 : _a.language) || 'en';
         const forceRefresh = data.forceRefresh || ((_b = data.data) === null || _b === void 0 ? void 0 : _b.forceRefresh) || false;
+        const userId = data.userId || ((_c = data.data) === null || _c === void 0 ? void 0 : _c.userId);
         const profileController = new profile_controller_1.ProfileController();
-        const result = await profileController.analyzeProfile(url, language, forceRefresh);
+        const result = await profileController.analyzeProfile(url, language, forceRefresh, userId);
         cors_helper_1.CorsHelper.sendCorsResponse(response, result);
     }
     catch (error) {
@@ -151,7 +151,6 @@ exports.optimizeContent = (0, https_1.onRequest)({
 }, cors_helper_1.CorsHelper.withCors(async (request, response) => {
     var _a, _b, _c, _d, _e;
     try {
-        console.log(`🚀 [OPTIMIZE_CONTENT] Starting optimization request`);
         const data = request.body;
         const content = ((_a = data.data) === null || _a === void 0 ? void 0 : _a.content) || data.content;
         const section = ((_b = data.data) === null || _b === void 0 ? void 0 : _b.section) || data.section;
@@ -174,7 +173,6 @@ exports.optimizeContent = (0, https_1.onRequest)({
         if (userId && section === 'headline') {
             try {
                 await user_context_service_1.userContext.loadUserContext(userId, linkedinUrl);
-                console.log(`✅ [OPTIMIZE_CONTENT] User context loaded for headline optimization: ${userId}`);
             }
             catch (contextError) {
                 console.warn(`⚠️ [OPTIMIZE_CONTENT] Failed to load user context: ${contextError}`);
@@ -183,9 +181,7 @@ exports.optimizeContent = (0, https_1.onRequest)({
         }
         const aiController = new ai_controller_1.AiController();
         try {
-            console.log(`🤖 [OPTIMIZE_CONTENT] Calling AI service for optimization`);
             const result = await aiController.optimizeContent(content, section, language);
-            console.log(`✅ [OPTIMIZE_CONTENT] Optimization completed successfully`);
             cors_helper_1.CorsHelper.sendCorsResponse(response, {
                 success: true,
                 data: result,

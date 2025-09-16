@@ -58,8 +58,6 @@ export const scrapeLinkedInProfile: HttpsFunction = onRequest(CorsHelper.withCor
 export const analyzeLinkedInProfile: HttpsFunction = onRequest(CorsHelper.withCors(async (request, response) => {
   try {
     const data = request.body;
-    
-    // Handle both direct URL format and wrapped data format
     let url: string;
     if (data && data.url) {
       url = data.url;
@@ -72,9 +70,10 @@ export const analyzeLinkedInProfile: HttpsFunction = onRequest(CorsHelper.withCo
     
     const language = data.language || data.data?.language || 'en';
     const forceRefresh = data.forceRefresh || data.data?.forceRefresh || false;
+    const userId = data.userId || data.data?.userId;
     
     const profileController = new ProfileController();
-    const result = await profileController.analyzeProfile(url, language, forceRefresh);
+    const result = await profileController.analyzeProfile(url, language, forceRefresh, userId);
 
     CorsHelper.sendCorsResponse(response, result);
   } catch (error) {
@@ -123,7 +122,6 @@ export const optimizeContent: HttpsFunction = onRequest({
   maxInstances: 10
 }, CorsHelper.withCors(async (request, response) => {
   try {
-    console.log(`🚀 [OPTIMIZE_CONTENT] Starting optimization request`);
     
     const data = request.body;
     const content = data.data?.content || data.content;
@@ -151,7 +149,6 @@ export const optimizeContent: HttpsFunction = onRequest({
     if (userId && section === 'headline') {
       try {
         await userContext.loadUserContext(userId, linkedinUrl);
-        console.log(`✅ [OPTIMIZE_CONTENT] User context loaded for headline optimization: ${userId}`);
       } catch (contextError) {
         console.warn(`⚠️ [OPTIMIZE_CONTENT] Failed to load user context: ${contextError}`);
         // Continue with optimization even if context loading fails
@@ -160,10 +157,8 @@ export const optimizeContent: HttpsFunction = onRequest({
 
     const aiController = new AiController();
     try {
-      console.log(`🤖 [OPTIMIZE_CONTENT] Calling AI service for optimization`);
       const result = await aiController.optimizeContent(content, section, language);
       
-      console.log(`✅ [OPTIMIZE_CONTENT] Optimization completed successfully`);
       CorsHelper.sendCorsResponse(response, {
         success: true,
         data: result,

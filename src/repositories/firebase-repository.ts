@@ -4,7 +4,6 @@ import { firebaseConfig } from '../config/firebase-config';
 
 
 
-console.log('firebaseConfig', firebaseConfig);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -14,10 +13,7 @@ const functions = getFunctions(app);
 // For browser extensions, we'll always connect to the emulator when available
 try {
   connectFunctionsEmulator(functions, 'localhost', 5001);
-  console.log('Connected to Firebase Functions emulator on localhost:5001');
 } catch (error) {
-  console.warn('Firebase emulator connection failed:', error);
-  console.log('Will use production Firebase Functions');
 }
 
 export interface ApiResponse<T = any> {
@@ -27,6 +23,7 @@ export interface ApiResponse<T = any> {
   message?: string;
   cached?: boolean;
   timestamp?: string;
+  userId?: string;
 }
 
 export interface CallMethodOptions {
@@ -51,15 +48,17 @@ export class FirebaseRepository {
     options: CallMethodOptions = {}
   ): Promise<ApiResponse<T>> {
     const { timeout = 300000, retries = 3, retryDelay = 2000 } = options;
-    // Use emulator URL in development, production URL otherwise
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const functionUrl = isDevelopment 
-      ? `http://localhost:5001/mehan-7640e/us-central1/${functionName}`
-      : `https://us-central1-mehan-7640e.cloudfunctions.net/${functionName}`;
+    // Use the configured base URL
+    const baseUrl = process.env.BASE_URL;
+    
+    if (!baseUrl) {
+      throw new Error('BASE_URL is not configured. Please set BASE_URL in your environment variables.');
+    }
+    
+    const functionUrl = baseUrl + `/${functionName}`;
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        console.log(`🔍 [DEBUG] Calling Firebase function ${functionName} with data:`, data);
 
         // Make the HTTP request
         const requestPromise = fetch(functionUrl, {
@@ -82,13 +81,10 @@ export class FirebaseRepository {
         try {
           result = JSON.parse(responseText);
         } catch (parseError) {
-          console.error('🔍 [DEBUG] Failed to parse JSON response:', parseError);
-          console.error('🔍 [DEBUG] Raw response that failed to parse:', responseText);
           const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
           throw new Error(`Invalid JSON response: ${errorMessage}`);
         }
 
-        console.log(`🔍 [DEBUG] Firebase function ${functionName} response:`, result);
 
         // Check if the entire result should be the data
         if (result.success && !result.data && Object.keys(result).length > 2) {
@@ -98,13 +94,17 @@ export class FirebaseRepository {
           };
         }
 
+        // Return the full result object to preserve top-level fields like userId
         return {
-          success: true,
-          data: result.data as T
+          success: result.success,
+          data: result.data as T,
+          userId: result.userId,
+          cached: result.cached,
+          timestamp: result.timestamp,
+          error: result.error
         };
 
       } catch (error) {
-        console.error(`Attempt ${attempt} failed for function ${functionName}:`, error);
         
         // If this is the last attempt, return the error
         if (attempt === retries) {
@@ -177,10 +177,7 @@ export class FirebaseRepository {
    */
   async analyzeLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 300000, retries = 3, retryDelay = 2000 } = options;
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const functionUrl = isDevelopment 
-      ? 'http://localhost:5001/mehan-7640e/us-central1/analyzeLinkedInProfile'
-      : 'https://us-central1-mehan-7640e.cloudfunctions.net/analyzeLinkedInProfile';
+    const functionUrl = process.env.BASE_URL + '/analyzeLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -210,8 +207,6 @@ export class FirebaseRepository {
         try {
           result = JSON.parse(responseText);
         } catch (parseError) {
-          console.error('🔍 [DEBUG] Failed to parse JSON response:', parseError);
-          console.error('🔍 [DEBUG] Raw response that failed to parse:', responseText);
           const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
           throw new Error(`Invalid JSON response: ${errorMessage}`);
         }
@@ -224,9 +219,14 @@ export class FirebaseRepository {
           };
         }
 
+        // Return the full result object to preserve top-level fields like userId
         return {
-          success: true,
-          data: result.data
+          success: result.success,
+          data: result.data,
+          userId: result.userId,
+          cached: result.cached,
+          timestamp: result.timestamp,
+          error: result.error
         };
 
       } catch (error) {
@@ -259,10 +259,7 @@ export class FirebaseRepository {
    */
   async getCachedLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 30000, retries = 1, retryDelay = 1000 } = options;
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const functionUrl = isDevelopment 
-      ? 'http://localhost:5001/mehan-7640e/us-central1/getCachedLinkedInProfile'
-      : 'https://us-central1-mehan-7640e.cloudfunctions.net/getCachedLinkedInProfile';
+    const functionUrl = process.env.BASE_URL + '/getCachedLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -293,7 +290,6 @@ export class FirebaseRepository {
         };
 
       } catch (error) {
-        console.error(`Attempt ${attempt} failed for getCachedLinkedInProfile:`, error);
         
         // If this is the last attempt, throw the error
         if (attempt === retries) {
@@ -322,10 +318,7 @@ export class FirebaseRepository {
    */
   async clearCachedLinkedInProfile(url: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
     const { timeout = 30000, retries = 1, retryDelay = 1000 } = options;
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const functionUrl = isDevelopment 
-      ? 'http://localhost:5001/mehan-7640e/us-central1/clearCachedLinkedInProfile'
-      : 'https://us-central1-mehan-7640e.cloudfunctions.net/clearCachedLinkedInProfile';
+    const functionUrl = process.env.BASE_URL + '/clearCachedLinkedInProfile';
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -353,7 +346,6 @@ export class FirebaseRepository {
         };
 
       } catch (error) {
-        console.error(`Attempt ${attempt} failed for clearCachedLinkedInProfile:`, error);
         
         // If this is the last attempt, throw the error
         if (attempt === retries) {
@@ -389,6 +381,75 @@ export class FirebaseRepository {
    */
   getFunctions() {
     return this.functions;
+  }
+
+  /**
+   * Get complete user object by user ID (GET request with query parameter)
+   * @param userId - The user ID
+   * @param options - Optional configuration for the request
+   * @returns Promise with the user object response
+   */
+  async getCompleteUserObject(userId: string, options: CallMethodOptions = {}): Promise<ApiResponse> {
+    const { timeout = 30000, retries = 3, retryDelay = 2000 } = options;
+    const functionUrl = process.env.BASE_URL + `/getCompleteUserObject?userId=${encodeURIComponent(userId)}`;
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+
+        // Make the GET request with proper headers for large responses
+        const requestPromise = fetch(functionUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
+        const response = await Promise.race([requestPromise]);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (parseError) {
+          const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown parsing error';
+          throw new Error(`Invalid JSON response: ${errorMessage}`);
+        }
+        return {
+          success: result.success,
+          data: result.data,
+          error: result.error,
+          message: result.message,
+          cached: result.cached,
+          timestamp: result.timestamp
+        };
+
+      } catch (error) {
+        console.error(`Attempt ${attempt} failed for getCompleteUserObject:`, error);
+        
+        // If this is the last attempt, return the error
+        if (attempt === retries) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred'
+          };
+        }
+        
+        // Wait before retrying
+        await this.delay(retryDelay * attempt);
+      }
+    }
+
+    return {
+      success: false,
+      error: 'All retry attempts failed'
+    };
   }
 
   /**

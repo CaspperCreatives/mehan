@@ -83,6 +83,10 @@ module.exports = {
     // Define process.env for browser environment
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({
+        API_URL: process.env.API_URL || '',
+        DEV_API: process.env.DEV_API || '',
+        IS_DEV: process.env.IS_DEV || 'false',
+        BASE_URL: process.env.IS_DEV ? process.env.DEV_API : process.env.API_URL,
         OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
         GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || '',
         GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',

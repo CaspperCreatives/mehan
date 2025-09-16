@@ -44,7 +44,15 @@ export class OptimizedContentService {
 
   constructor() {
     // Use the Firebase Functions URL for the backend
-    this.baseUrl = 'https://us-central1-linkedin-extension-ai.cloudfunctions.net';
+    this.baseUrl = process.env.BASE_URL || '';
+    
+    // Validate that we have a proper API URL
+    if (!this.baseUrl) {
+      console.error('❌ BASE_URL is not configured. Please set BASE_URL in your environment variables.');
+      throw new Error('BASE_URL is not configured. Please set BASE_URL in your environment variables.');
+    }
+    
+    console.log('🔗 Using API URL:', this.baseUrl);
   }
 
   /**
@@ -235,7 +243,6 @@ export class OptimizedContentService {
         throw new Error(result.error || 'Failed to save complete user object');
       }
 
-      console.log('✅ Complete user object saved to database');
       return true;
     } catch (error) {
       console.error('❌ Error saving complete user object:', error);
@@ -310,9 +317,7 @@ export class OptimizedContentService {
         };
         
         await this.saveOptimizedContent(individualContentData);
-        console.log('✅ Individual optimized content saved to database');
       } catch (individualSaveError) {
-        console.error('❌ Failed to save individual optimized content:', individualSaveError);
         // Continue with complete user object saving even if individual save fails
       }
       

@@ -1,4 +1,3 @@
-// Debug script for Chrome extension issues
 // Run this in the browser console on any page
 
 console.log('=== Extension Debug Information ===');
@@ -79,7 +78,6 @@ console.log('Is LinkedIn profile page:', window.location.pathname.startsWith('/i
 console.log('\n=== Error Check ===');
 console.log('Check the browser console for any red error messages related to the extension.');
 
-// Instructions for manual debugging
 console.log('\n=== Manual Debugging Steps ===');
 console.log('1. Go to chrome://extensions/');
 console.log('2. Enable Developer mode');

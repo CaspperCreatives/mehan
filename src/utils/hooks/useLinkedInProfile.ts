@@ -51,139 +51,162 @@ export const useLinkedInProfile = (profileUrl?: string) => {
   const [scrapedData, setScrapedData] = useState<any | null>(null);
   const [optimizedContentService] = useState(() => new OptimizedContentService());
 
-  /**
-   * Cleans the content by removing the first line (section title)
-   * @param content - The raw content with section title
-   * @returns {string} The cleaned content without the section title
-   */
-  const cleanContent = (content: string): string => {
-    if (!content) return '';
-    
-    const lines = content.split('\n');
-    // Remove the first line (section title) and join the rest
-    return lines.slice(1).join('\n').trim();
-  };
 
-  /**
-   * Save user and profile data to database
-   * @param profileData - The scraped profile data
-   * @param linkedinUrl - The LinkedIn profile URL
-   */
-  const saveUserAndProfileData = async (profileData: any, linkedinUrl: string) => {
-    try {
-      console.log('🔍 [DEBUG] Saving user and profile data to database...');
-      
-      // Extract profile information using utility function
-      const profileId = extractProfileId(profileData);
-      const firstName = profileData?.firstName;
-      const lastName = profileData?.lastName;
-      
-      console.log('🔍 [DEBUG] Profile info:', { profileId, firstName, lastName, linkedinUrl });
-      
-      if (!profileId) {
-        console.warn('⚠️ [DEBUG] No profile ID found, skipping database save');
-        return;
-      }
-      
-      // Normalize LinkedIn URL
-      const normalizedLinkedInUrl = normalizeLinkedInUrl(linkedinUrl);
-      
-      // Generate a consistent user ID using utility function (matches backend)
-      const userId = generateUserId(profileId, normalizedLinkedInUrl);
-      console.log('🔍 [DEBUG] Generated User ID:', userId);
-      
-      // Update user session with profile information
-      await UserManager.updateUserSessionWithCompleteProfile(profileData, profileId, linkedinUrl);
-      console.log('✅ [DEBUG] User session updated with profile data');
-      
-      // Save complete user object to database
-      const completeUserObject = {
-        userId,
-        profileId,
-        linkedinUrl: normalizedLinkedInUrl,
-        profileData,
-        optimizedContent: [], // Will be populated when user optimizes content
-        totalOptimizations: 0,
-        lastOptimizedAt: undefined
-      };
-      
-      const saveResult = await optimizedContentService.addOptimizedContentToUserSession(
-        {
-          section: 'profile_data',
-          originalContent: 'Profile data from LinkedIn scraping',
-          optimizedContent: 'Profile data saved to database',
-          sectionType: 'profile_data',
-          metadata: {
-            wordCount: 0,
-            characterCount: 0,
-            language: 'en'
-          },
-          optimizedAt: new Date().toISOString()
-        },
-        profileData,
-        profileId,
-        linkedinUrl
-      );
-      
-      if (saveResult) {
-        console.log('✅ [DEBUG] Complete user object saved to database successfully');
-      } else {
-        console.error('❌ [DEBUG] Failed to save complete user object to database');
-      }
-      
-    } catch (error) {
-      console.error('❌ [DEBUG] Error saving user and profile data:', error);
-      // Don't throw the error - this shouldn't break the main flow
-    }
-  };
   
   // Use provided URL or fall back to current page URL
   const url = profileUrl || window.location.href;
 
   const scrapeProfile = async (forceRefresh: boolean = false) => {
     try {
-      console.log('🔍 [DEBUG] Starting profile scraping for URL:', url);
-      console.log('🔍 [DEBUG] Force refresh requested:', forceRefresh);
       setAiLoading(true);
       
       // Initialize UserManager with Firebase repository
       UserManager.setFirebaseRepository(firebaseRepository);
       
-      // Always scrape fresh data - no database caching to prevent data mixing
-      console.log('🔍 [DEBUG] Always scraping fresh data to prevent data mixing between users');
-      console.log('🔍 [DEBUG] Calling scraperService.analyzeLinkedInProfile with URL:', url);
+      // Check if we have existing user data in localStorage
+      const existingUserId = localStorage.getItem(`linkedin-user-id-${url}`);
+      
+      // If we have a stored userId and not forcing refresh, fetch existing data from database
+      if (existingUserId && !forceRefresh) {
+        
+        try {
+          const existingUserData = await UserManager.fetchUserDataFromDatabase(url, forceRefresh);
+          
+          if (existingUserData) {
+            
+            // Set the profile data from existing user data
+            if (existingUserData.profileData) {
+              setProfile(existingUserData.profileData);
+            }
+            
+            // Set AI analysis if available
+            if (existingUserData.analysis) {
+              setAiAnalysis(existingUserData.analysis);
+            }
+            
+            // Load the complete user data into UserManager session for optimized content access
+            try {
+              await UserManager.updateUserSessionWithCompleteProfile(
+                existingUserData.profileData,
+                existingUserData.profileId,
+                existingUserData.linkedinUrl
+              );
+              
+              // If there's optimized content, add it to the session
+              if (existingUserData.optimizedContent && existingUserData.optimizedContent.length > 0) {
+                
+                // Load each optimized content item into the session
+                for (const content of existingUserData.optimizedContent) {
+                  await UserManager.addOptimizedContentToSession(content);
+                }
+                
+              }
+
+              // Load limits from database into UserManager session
+              const currentSession = await UserManager.getCurrentUserSession();
+              if (currentSession) {
+                // Always load both limits from database, with fallbacks to defaults
+                const optimizationLimit = existingUserData.optimizationLimit ? {
+                  remainingOptimizations: existingUserData.optimizationLimit.remainingOptimizations ,
+                  hasOptimized: existingUserData.optimizationLimit.hasOptimized ?? false,
+                  optimizedSection: existingUserData.optimizationLimit.optimizedSection,
+                  optimizedAt: existingUserData.optimizationLimit.optimizedAt
+                } : {
+                  remainingOptimizations: 0,
+                  hasOptimized: false,
+                  optimizedSection: undefined,
+                  optimizedAt: undefined
+                };
+                
+                const refreshLimit = existingUserData.refreshLimit ? {
+                  remainingRefreshes: existingUserData.refreshLimit.remainingRefreshes ?? 2,
+                  lastRefreshDate: existingUserData.refreshLimit.lastRefreshDate ?? new Date().toDateString(),
+                  totalRefreshes: existingUserData.refreshLimit.totalRefreshes ?? 0
+                } : {
+                  remainingRefreshes: 2,
+                  lastRefreshDate: new Date().toDateString(),
+                  totalRefreshes: 0
+                };
+                
+                // Update the user session with both limits from database
+                const updatedSession = {
+                  ...currentSession,
+                  optimizationLimit: optimizationLimit,
+                  refreshLimit: refreshLimit
+                };
+                UserManager['currentUserSession'] = updatedSession;
+              }
+            } catch (sessionError) {
+            }
+            
+            // Create a mock response structure for consistency
+            const mockScrapedData = {
+              success: true,
+              data: {
+                profile: existingUserData.profileData ? [existingUserData.profileData] : [],
+                analysis: existingUserData.analysis,
+                profileScore: existingUserData.profileScore
+              },
+              userId: existingUserId,
+              cached: true,
+              timestamp: existingUserData.updatedAt || new Date().toISOString()
+            };
+            
+            setScrapedData(mockScrapedData);
+            setAiLoading(false);
+            setLoading(false);
+            
+            // Trigger a re-check of optimization limits after database data is loaded
+            setTimeout(() => {
+              // This will trigger the useEffect in AIAnalysisSidebar that depends on scrapedData
+              setScrapedData((prev: any) => ({ ...prev, _forceLimitCheck: Date.now() }));
+            }, 100);
+            
+            return; // Exit early with existing data - no API call needed
+          } else {
+            // Continue to API call below
+          }
+        } catch (dbError) {
+          // Continue to API call below
+        }
+      }
       
       // Get current language from document or default to 'en'
       const currentLanguage = document.documentElement.lang === 'ar' ? 'ar' : 'en';
-      const scrapedData = await scraperService.analyzeLinkedInProfile(url, currentLanguage, true); // Always force refresh
-      console.log('🔍 [DEBUG] Raw scrapedData response:', scrapedData);
-      console.log('🔍 [DEBUG] scrapedData.success:', scrapedData?.success);
-      console.log('🔍 [DEBUG] scrapedData.data:', scrapedData?.data);
-      console.log('🔍 [DEBUG] scrapedData.error:', scrapedData?.error);
+      const scrapedData = await scraperService.analyzeLinkedInProfile(url, currentLanguage, forceRefresh, existingUserId || undefined);
       
       // Store the raw scrapedData for debugging
       setScrapedData(scrapedData);
       
+      // Debug: Log the entire response structure
+      
       if (scrapedData?.success && scrapedData?.data) {
-        console.log('🔍 [DEBUG] Setting AI analysis with data:', scrapedData.data);
         setAiAnalysis(scrapedData.data);
         
-        // Save scraped data to database and update user session
-        await UserManager.saveScrapedDataToDatabase(scrapedData, url);
+        // Set profile data if available
+        if (scrapedData.data.profile && scrapedData.data.profile.length > 0) {
+          setProfile(scrapedData.data.profile[0]);
+        }
+        
+        // Get user ID from backend response (backend already saves data to database)
+        const finalUserId = scrapedData.userId;
+        
+        // Save user ID to localStorage for future use
+        if (finalUserId) {
+          localStorage.setItem(`linkedin-user-id-${url}`, finalUserId);
+        } else {
+        }
       } else {
-        console.error('🔍 [DEBUG] Scraped data indicates failure or null data');
-        console.error('🔍 [DEBUG] Full scrapedData object:', JSON.stringify(scrapedData, null, 2));
       }
       
       setAiLoading(false);
+      
+      // Trigger a re-check of optimization limits after fresh data is loaded
+      setTimeout(() => {
+        setScrapedData((prev: any) => ({ ...prev, _forceLimitCheck: Date.now() }));
+      }, 100);
     
     } catch (err) {
-      console.error('🔍 [DEBUG] Error in scrapeProfile:', err);
-      console.error('🔍 [DEBUG] Error details:', {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        error: err
-      });
       setError(err instanceof Error ? err.message : 'An error occurred while scraping the profile');
     } finally {
       setLoading(false);
@@ -192,7 +215,6 @@ export const useLinkedInProfile = (profileUrl?: string) => {
 
   // Refresh function that can be called externally
   const refreshProfileData = async () => {
-    console.log('🔍 [DEBUG] refreshProfileData called');
     setLoading(true);
     setError(null);
     await scrapeProfile(true); // Force refresh
@@ -201,29 +223,21 @@ export const useLinkedInProfile = (profileUrl?: string) => {
   // Clear cache function
   const clearCache = async () => {
     try {
-      console.log('🔍 [DEBUG] clearCache called for URL:', url);
       setLoading(true);
       const response = await firebaseRepository.clearCachedLinkedInProfile(url);
-      console.log('🔍 [DEBUG] clearCache response:', response);
       
       if (response.success) {
-        console.log('🔍 [DEBUG] Cache cleared successfully');
         // Force a fresh scrape
         await scrapeProfile(true);
       } else {
-        console.error('🔍 [DEBUG] Failed to clear cache:', response.error);
       }
     } catch (err) {
-      console.error('🔍 [DEBUG] Error clearing cache:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('🔍 [DEBUG] useLinkedInProfile useEffect triggered');
-    console.log('🔍 [DEBUG] URL to scrape:', url);
-    console.log('🔍 [DEBUG] Starting profile scraping and user/profile saving...');
     scrapeProfile();
   }, []);
 

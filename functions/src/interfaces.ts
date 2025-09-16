@@ -1,5 +1,6 @@
 export interface IScraperService {
   scrapeLinkedInProfile(url: string): Promise<any>;
+  getUserObject(userId: string): Promise<any>;
 }
 
 export interface AIAnalysisResponse {

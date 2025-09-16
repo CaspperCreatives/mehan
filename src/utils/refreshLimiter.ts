@@ -1,33 +1,37 @@
-interface RefreshData {
-  count: number;
-  date: string;
-}
+import { UserManager } from './userManager';
 
 const REFRESH_LIMIT = 2;
-const STORAGE_KEY = 'linkedin_profile_refresh_data';
 
 export class RefreshLimiter {
   private static getToday(): string {
     return new Date().toDateString();
   }
 
-  private static async getRefreshData(): Promise<RefreshData> {
-    return new Promise((resolve) => {
-      chrome.storage.local.get([STORAGE_KEY], (result) => {
-        const data = result[STORAGE_KEY] as RefreshData;
-        if (!data) {
-          resolve({ count: 0, date: this.getToday() });
-        } else {
-          resolve(data);
-        }
-      });
-    });
-  }
-
-  private static async setRefreshData(data: RefreshData): Promise<void> {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [STORAGE_KEY]: data }, resolve);
-    });
+  private static async getRefreshData(): Promise<{
+    remainingRefreshes: number;
+    lastRefreshDate: string;
+    totalRefreshes: number;
+  }> {
+    try {
+      const userSession = await UserManager.getCurrentUserSession();
+      
+      if (!userSession?.refreshLimit) {
+        // Initialize with default values if not set
+        return {
+          remainingRefreshes: REFRESH_LIMIT,
+          lastRefreshDate: this.getToday(),
+          totalRefreshes: 0
+        };
+      }
+      
+      return userSession.refreshLimit;
+    } catch (error) {
+      return {
+        remainingRefreshes: REFRESH_LIMIT,
+        lastRefreshDate: this.getToday(),
+        totalRefreshes: 0
+      };
+    }
   }
 
   static async canRefresh(): Promise<{ canRefresh: boolean; remaining: number; resetTime: string }> {
@@ -35,8 +39,12 @@ export class RefreshLimiter {
     const data = await this.getRefreshData();
 
     // Reset count if it's a new day
-    if (data.date !== today) {
-      await this.setRefreshData({ count: 0, date: today });
+    if (data.lastRefreshDate !== today) {
+      await this.updateRefreshData({
+        remainingRefreshes: REFRESH_LIMIT,
+        lastRefreshDate: today,
+        totalRefreshes: 0
+      });
       return {
         canRefresh: true,
         remaining: REFRESH_LIMIT,
@@ -44,24 +52,81 @@ export class RefreshLimiter {
       };
     }
 
-    const remaining = Math.max(0, REFRESH_LIMIT - data.count);
     return {
-      canRefresh: data.count < REFRESH_LIMIT,
-      remaining,
+      canRefresh: data.remainingRefreshes > 0,
+      remaining: data.remainingRefreshes,
       resetTime: this.getNextResetTime()
     };
   }
 
   static async incrementRefreshCount(): Promise<void> {
-    const today = this.getToday();
-    const data = await this.getRefreshData();
+    try {
+      const userSession = await UserManager.getCurrentUserSession();
+      
+      if (!userSession) {
+        return;
+      }
 
-    if (data.date !== today) {
-      // New day, reset count
-      await this.setRefreshData({ count: 1, date: today });
-    } else {
-      // Same day, increment count
-      await this.setRefreshData({ count: data.count + 1, date: today });
+      const today = this.getToday();
+      const currentRefreshLimit = userSession.refreshLimit || {
+        remainingRefreshes: REFRESH_LIMIT,
+        lastRefreshDate: today,
+        totalRefreshes: 0
+      };
+
+      let updatedRefreshLimit;
+      
+      if (currentRefreshLimit.lastRefreshDate !== today) {
+        // New day, reset count
+        updatedRefreshLimit = {
+          remainingRefreshes: REFRESH_LIMIT - 1,
+          lastRefreshDate: today,
+          totalRefreshes: 1
+        };
+      } else {
+        // Same day, decrement remaining and increment total
+        updatedRefreshLimit = {
+          remainingRefreshes: Math.max(0, currentRefreshLimit.remainingRefreshes - 1),
+          lastRefreshDate: today,
+          totalRefreshes: currentRefreshLimit.totalRefreshes + 1
+        };
+      }
+
+      // Update the user session
+      const updatedSession = {
+        ...userSession,
+        refreshLimit: updatedRefreshLimit,
+        lastActiveAt: new Date().toISOString()
+      };
+
+      UserManager['currentUserSession'] = updatedSession;
+    } catch (error) {
+      // Silent error handling
+    }
+  }
+
+  private static async updateRefreshData(refreshData: {
+    remainingRefreshes: number;
+    lastRefreshDate: string;
+    totalRefreshes: number;
+  }): Promise<void> {
+    try {
+      const userSession = await UserManager.getCurrentUserSession();
+      
+      if (!userSession) {
+        return;
+      }
+
+      // Update the user session
+      const updatedSession = {
+        ...userSession,
+        refreshLimit: refreshData,
+        lastActiveAt: new Date().toISOString()
+      };
+
+      UserManager['currentUserSession'] = updatedSession;
+    } catch (error) {
+      // Silent error handling
     }
   }
 
@@ -78,6 +143,10 @@ export class RefreshLimiter {
   }
 
   static async resetDailyLimit(): Promise<void> {
-    await this.setRefreshData({ count: 0, date: this.getToday() });
+    await this.updateRefreshData({
+      remainingRefreshes: REFRESH_LIMIT,
+      lastRefreshDate: this.getToday(),
+      totalRefreshes: 0
+    });
   }
 } 

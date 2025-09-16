@@ -41,6 +41,17 @@ export interface ICompleteUserObject {
   }>;
   totalOptimizations?: number;
   lastOptimizedAt?: string;
+  optimizationLimit?: {
+    remainingOptimizations: number;
+    hasOptimized: boolean;
+    optimizedSection?: string;
+    optimizedAt?: string;
+  };
+  refreshLimit?: {
+    remainingRefreshes: number;
+    lastRefreshDate: string;
+    totalRefreshes: number;
+  };
   createdAt?: admin.firestore.Timestamp;
   updatedAt?: admin.firestore.Timestamp;
 }
@@ -130,7 +141,6 @@ export class OptimizedContentRepository extends FirebaseRepository<IOptimizedCon
       try {
         now = admin.firestore.Timestamp.now();
       } catch (timestampError) {
-        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
         now = new Date();
       }
       const docData = {
@@ -164,7 +174,6 @@ export class OptimizedContentRepository extends FirebaseRepository<IOptimizedCon
       try {
         now = admin.firestore.Timestamp.now();
       } catch (timestampError) {
-        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
         now = new Date();
       }
       
@@ -196,7 +205,6 @@ export class OptimizedContentRepository extends FirebaseRepository<IOptimizedCon
       await this.delete(contentId);
       return true;
     } catch (error) {
-      console.error(`Failed to delete optimized content: ${error}`);
       return false;
     }
   }
@@ -339,7 +347,6 @@ export class CompleteUserObjectRepository extends FirebaseRepository<ICompleteUs
       try {
         now = admin.firestore.Timestamp.now();
       } catch (timestampError) {
-        console.warn('🔍 [BACKEND DEBUG] admin.firestore.Timestamp.now() not available, using regular Date:', timestampError);
         now = new Date();
       }
       
@@ -348,24 +355,20 @@ export class CompleteUserObjectRepository extends FirebaseRepository<ICompleteUs
       
       if (userObject.linkedinUrl) {
         existingUser = await this.findByLinkedInUrl(userObject.linkedinUrl);
-        console.log(`🔍 [BACKEND] Checking for existing user by LinkedIn URL: ${userObject.linkedinUrl}`, existingUser ? 'Found' : 'Not found');
       }
       
       // If not found by LinkedIn URL, try by profile ID
       if (!existingUser && userObject.profileId) {
         existingUser = await this.findByProfileId(userObject.profileId);
-        console.log(`🔍 [BACKEND] Checking for existing user by profile ID: ${userObject.profileId}`, existingUser ? 'Found' : 'Not found');
       }
       
       // If still not found, try by userId as fallback
       if (!existingUser) {
         existingUser = await this.findByUserId(userObject.userId);
-        console.log(`🔍 [BACKEND] Checking for existing user by userId: ${userObject.userId}`, existingUser ? 'Found' : 'Not found');
       }
       
       if (existingUser && existingUser.id) {
         // Update existing user object
-        console.log(`🔄 [BACKEND] Updating existing user: ${existingUser.id}`);
         const updateData = {
           ...userObject,
           updatedAt: now,
@@ -385,7 +388,6 @@ export class CompleteUserObjectRepository extends FirebaseRepository<ICompleteUs
         };
       } else {
         // Create new user object
-        console.log(`➕ [BACKEND] Creating new user for LinkedIn URL: ${userObject.linkedinUrl}`);
         const docData = {
           ...userObject,
           createdAt: now,

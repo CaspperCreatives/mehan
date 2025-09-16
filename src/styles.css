@@ -224,6 +224,7 @@
     padding-top: 15px;
     width: 450px;
     flex-grow: 1;
+    height: 70vh;
   }
 
   .white-card-header {
@@ -231,7 +232,7 @@
     flex-direction: column;
     gap: 25px;
     padding: 15px;
-    height: 90%;
+    height: 100%;
     overflow-y: auto;
   }
 

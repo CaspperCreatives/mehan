@@ -152,15 +152,11 @@ export class ScraperRepository {
    * @param language - Language for the analysis
    * @returns Promise with analysis results
    */
-  async analyzeLinkedInProfile(url: string, language?: string, forceRefresh?: boolean): Promise<ApiResponse> {
-    console.log('🔍 [DEBUG] ScraperRepository.analyzeLinkedInProfile called with URL:', url, 'language:', language, 'forceRefresh:', forceRefresh);
+  async analyzeLinkedInProfile(url: string, language?: string, forceRefresh?: boolean, userId?: string): Promise<ApiResponse> {
     try {
-
-      const result = await this.firebaseRepo.callMethodWithType('analyzeLinkedInProfile', { url, language, forceRefresh });
-      console.log('🔍 [DEBUG] ScraperRepository.analyzeLinkedInProfile result:', result);
+      const result = await this.firebaseRepo.callMethodWithType('analyzeLinkedInProfile', { url, language, forceRefresh, userId });
       return result;
     } catch (error) {
-      console.error('🔍 [DEBUG] ScraperRepository.analyzeLinkedInProfile error:', error);
       throw error;
     }
   }

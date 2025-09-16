@@ -7,6 +7,7 @@ import { faRotateRight, faInfoCircle, faWandMagicSparkles, faEdit, faPlay, faSta
 import gsap from 'gsap';
 import { ExportButtons } from './ExportButtons';
 import { RefreshLimiter } from '../utils/refreshLimiter';
+import { OptimizationLimiter } from '../utils/optimizationLimiter';
 import { Tooltip } from './Tooltip';
 import { marked } from 'marked';
 import { AiService } from '../services/aiService';
@@ -469,8 +470,15 @@ const SectionsSlider: React.FC<{
   setSelectedSection: (section: any) => void,
   sectionLoading: boolean,
   getSectionContent: (section: string) => string,
-  sectionsWithOptimizedContent: any[]
-}> = ({ sections, analysis, currentLanguage, profile, generatedData, parsedAnalysis, onOptimizeContent, onEditOnLinkedIn, selectedSection, setSelectedSection, sectionLoading = false, getSectionContent, sectionsWithOptimizedContent }) => {
+  sectionsWithOptimizedContent: any[],
+  optimizationLimit: { 
+    canOptimize: boolean; 
+    hasOptimized: boolean; 
+    optimizedSection?: string; 
+    optimizedAt?: string;
+    remainingOptimizations: number;
+  }
+}> = ({ sections, analysis, currentLanguage, profile, generatedData, parsedAnalysis, onOptimizeContent, onEditOnLinkedIn, selectedSection, setSelectedSection, sectionLoading = false, getSectionContent, sectionsWithOptimizedContent, optimizationLimit }) => {
   // Constants
   const titleMap: { [key: string]: string } = {
     'linkedinurl': getTranslation(currentLanguage, 'url'),
@@ -558,8 +566,6 @@ const SectionsSlider: React.FC<{
       originalContent: getSectionContent(section.section),
       optimizedContent: sectionWithOptimizedContent?.optimizedContent || section.optimizedContent
     };
-    console.log('Section clicked:', section);
-    console.log('Clean section with optimized content:', cleanSection);
     setSelectedSection(cleanSection);
   };
 
@@ -659,41 +665,47 @@ const SectionsSlider: React.FC<{
           <div className="btns" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px' }}>
             {/* Only show optimize button for specific sections */}
             {sectionHasOptimization.includes(selectedSection.section?.toLowerCase()) && (
-              <Tooltip text={sectionLoading ? "AI is optimizing..." : "AI Optimize Content"}>
+              <Tooltip text={
+                sectionLoading 
+                  ? "AI is optimizing..." 
+                  : !optimizationLimit.canOptimize 
+                    ? `Optimization limit reached. You optimized the ${optimizationLimit.optimizedSection} section.`
+                    : "AI Optimize Content"
+              }>
                 <button
                   onClick={() => onOptimizeContent(selectedSection)}
-                  disabled={sectionLoading}
+                  disabled={sectionLoading || !optimizationLimit.canOptimize}
                   style={{
                     width: '40px',
                     height: '40px',
-                    background: sectionLoading 
+                    background: sectionLoading || !optimizationLimit.canOptimize
                       ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' 
                       : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '50%',
                     fontSize: '16px',
-                    cursor: sectionLoading ? 'not-allowed' : 'pointer',
+                    cursor: sectionLoading || !optimizationLimit.canOptimize ? 'not-allowed' : 'pointer',
                     transition: 'all 0.3s ease',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: sectionLoading 
+                    boxShadow: sectionLoading || !optimizationLimit.canOptimize
                       ? '0 2px 8px rgba(156, 163, 175, 0.3)' 
                       : '0 4px 15px rgba(102, 126, 234, 0.4)',
                     position: 'relative',
                     overflow: 'hidden',
-                    opacity: sectionLoading ? 0.7 : 1
+                    opacity: sectionLoading || !optimizationLimit.canOptimize ? 0.7 : 1
                   }}
                   onMouseEnter={(e) => {
-                    if (!sectionLoading) {
+                    if (!sectionLoading && optimizationLimit.canOptimize) {
                       e.currentTarget.style.transform = 'scale(1.1) rotate(5deg)';
                       e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
                       e.currentTarget.style.background = 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!sectionLoading) {
+                    if (!sectionLoading && optimizationLimit.canOptimize) {
                       e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
                       e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
                       e.currentTarget.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
@@ -709,6 +721,27 @@ const SectionsSlider: React.FC<{
                       borderRadius: '50%',
                       animation: 'spin 1s linear infinite'
                     }} />
+                  ) : !optimizationLimit.canOptimize ? (
+                    <div style={{ position: 'relative' }}>
+                      <FontAwesomeIcon icon={faWandMagicSparkles} style={{ fontSize: '18px', opacity: 0.5 }} />
+                      <div style={{
+                        position: 'absolute',
+                        top: '-2px',
+                        right: '-2px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        borderRadius: '50%',
+                        width: '12px',
+                        height: '12px',
+                        fontSize: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold'
+                      }}>
+                        ✕
+                      </div>
+                    </div>
                   ) : (
                     <FontAwesomeIcon icon={faWandMagicSparkles} style={{ fontSize: '18px' }} />
                   )}
@@ -1132,7 +1165,6 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
         });
         setHtmlContent(html);
       } catch (error) {
-        console.error('Error rendering markdown:', error);
         setHtmlContent(content); // Fallback to plain text
       }
     };
@@ -1189,6 +1221,39 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
   const [sectionLoading, setSectionLoading] = useState(false);
   const [optimizedContentService] = useState(() => new OptimizedContentService());
   const [sectionsWithOptimizedContent, setSectionsWithOptimizedContent] = useState<any[]>([]);
+  const [optimizationLimit, setOptimizationLimit] = useState<{ 
+    canOptimize: boolean; 
+    hasOptimized: boolean; 
+    optimizedSection?: string; 
+    optimizedAt?: string;
+    remainingOptimizations: number;
+  }>({
+    canOptimize: true,
+    hasOptimized: false,
+    remainingOptimizations: 1
+  });
+
+  // Check optimization limit on component mount and when user data changes
+  useEffect(() => {
+    const checkOptimizationLimit = async () => {
+      try {
+        // Always check from database to ensure we have the latest state
+        const limitStatus = await OptimizationLimiter.canOptimizeFromDatabase();
+        setOptimizationLimit(limitStatus);
+      } catch (error) {
+        console.error('❌ Error checking optimization limit from database:', error);
+        // Fallback to session data if database check fails
+        try {
+          const fallbackStatus = await OptimizationLimiter.canOptimize();
+          setOptimizationLimit(fallbackStatus);
+        } catch (fallbackError) {
+          console.error('❌ Error with fallback optimization limit check:', fallbackError);
+        }
+      }
+    };
+
+    checkOptimizationLimit();
+  }, [scrapedData]); // Re-check when scrapedData changes (user data loaded)
 
   // Load optimized content from user session and database on component mount
   useEffect(() => {
@@ -1197,9 +1262,7 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
         // First try to load from local session
         const userSession = await UserManager.getCurrentUserSession();
         if (userSession?.optimizedContent && userSession.optimizedContent.length > 0) {
-          console.log('🔄 Loading optimized content from local session:', userSession.optimizedContent);
           setSectionsWithOptimizedContent(userSession.optimizedContent);
-          console.log('✅ Loaded optimized content from local session');
         } else {
           // If no local session, try to load from database
           try {
@@ -1207,7 +1270,6 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
             const dbContent = await optimizedContentService.getOptimizedContent(userId);
             
             if (dbContent && dbContent.length > 0) {
-              console.log('🔄 Loading optimized content from database:', dbContent);
               
               // Convert database format to local format
               const localFormatContent = dbContent.map(item => ({
@@ -1220,19 +1282,37 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
               }));
               
               setSectionsWithOptimizedContent(localFormatContent);
-              console.log('✅ Loaded optimized content from database');
             }
           } catch (dbError) {
-            console.error('❌ Error loading optimized content from database:', dbError);
           }
         }
+
+        // Re-check both limits after loading user data
+        try {
+          const limitStatus = await OptimizationLimiter.canOptimizeFromDatabase();
+          setOptimizationLimit(limitStatus);
+        } catch (limitError) {
+          console.error('❌ Error checking optimization limit from database:', limitError);
+          // Fallback to session data if database check fails
+          try {
+            const fallbackStatus = await OptimizationLimiter.canOptimize();
+            setOptimizationLimit(fallbackStatus);
+          } catch (fallbackError) {
+            console.error('❌ Error with fallback optimization limit check:', fallbackError);
+          }
+        }
+        
+        try {
+          const refreshLimitStatus = await RefreshLimiter.canRefresh();
+          setRefreshLimit(refreshLimitStatus);
+        } catch (refreshLimitError) {
+        }
       } catch (error) {
-        console.error('❌ Error loading optimized content from session:', error);
       }
     };
 
     loadOptimizedContentFromSession();
-  }, []);
+  }, [scrapedData]); // Re-run when scrapedData changes (user data loaded)
 
   // Helper functions
   const parseAIAnalysis = (): any => {
@@ -1339,7 +1419,6 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
     if (!profileData) {
       return null;
     }
-    console.log(section);
     
     const normalizedSection = section.toLowerCase();
     
@@ -1425,7 +1504,6 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
       const result = await aiService.optimizeContent(content, sectionType, currentLanguage);
       return result;
     } catch (error) {
-      console.error('Failed to optimize content:', error);
       throw error;
     }
   };
@@ -1461,14 +1539,11 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
       );
       
       if (success) {
-        console.log('✅ Complete user object with optimized content saved to database');
       } else {
-        console.error('❌ Failed to save complete user object to database');
       }
       
       return success;
     } catch (error) {
-      console.error('❌ Failed to save optimized content to database:', error);
       throw error;
     }
   };
@@ -1495,6 +1570,16 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
       await RefreshLimiter.incrementRefreshCount();
       const newLimit = await RefreshLimiter.canRefresh();
       setRefreshLimit(newLimit);
+      
+      // Save the updated user object with new refresh limit to database
+      try {
+        const completeUserSession = await UserManager.getCurrentUserSession();
+        if (completeUserSession) {
+          await optimizedContentService.saveCompleteUserObject(completeUserSession);
+        }
+      } catch (saveError) {
+        // Silent error handling for database save
+      }
     } catch (refreshError) {
       // Handle refresh error silently
     } finally {
@@ -1505,14 +1590,19 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
   const handleOptimizeContent = async (section: any) => {
     try {
       if (!section || !section.section) {
-        console.error('Invalid section object:', section);
+        return;
+      }
+
+      // Check optimization limit first - always from database
+      const limitStatus = await OptimizationLimiter.canOptimizeFromDatabase();
+      if (!limitStatus.canOptimize) {
+        alert(`You have already optimized the ${limitStatus.optimizedSection} section. Only 1 optimization trial is allowed total.`);
         return;
       }
       
       const sectionContent = getSectionContent(section.section);
       
       if (!sectionContent || sectionContent === `Content for ${section.section} section`) {
-        console.error('No content available for section:', section.section);
         return;
       }
       
@@ -1554,7 +1644,17 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
           }
         });
         
-        // Save optimized content to database
+        // Mark optimization as used (1 trial total limit) BEFORE saving to database
+        await OptimizationLimiter.markAsOptimized(section.section);
+        setOptimizationLimit(prev => ({ 
+          ...prev, 
+          canOptimize: false, 
+          hasOptimized: true, 
+          optimizedSection: section.section,
+          remainingOptimizations: 0
+        }));
+
+        // Save optimized content to database (now includes the updated optimization limit)
         try {
           await saveOptimizedContentToDatabase({
             section: section.section,
@@ -1565,14 +1665,11 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
             linkedinUrl: profileData?.inputUrl || profileData?.linkedinUrl
           });
         } catch (saveError) {
-          console.error('Failed to save optimized content to database:', saveError);
           // Don't throw the error - the optimization was successful, just saving failed
         }
       } else {
-        console.error('Failed to optimize content:', result.error);
       }
     } catch (error) {
-      console.error('Failed to optimize content:', error);
     } finally {
       setOptimizing(false);
       setSectionLoading(false);
@@ -1582,7 +1679,6 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
   const handleEditOnLinkedIn = (section: any) => {
     // Map section names to LinkedIn section IDs
 
-    console.log(section);
     const sectionIdMap: Record<string, string> = {
       'summary': 'about',
       'experiences': 'experience', 
@@ -1591,10 +1687,8 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
       'headline': 'headline',
     };
     const sectionId = sectionIdMap[section?.section || section];
-    console.log(sectionId);
     
     if (!sectionId) {
-      console.warn('Unknown section:', section);
       return;
     }
 
@@ -1608,19 +1702,15 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
     }
 
     if (!linkedInSection) {
-      console.warn(`LinkedIn section with ID '${sectionId}' not found`);
       return;
     }
 
-    console.log(linkedInSection);
 
     // Find the edit button within that section
     const editButton = linkedInSection.closest('section')?.querySelector('a[href]:has([href*="#edit-medium"])') as HTMLAnchorElement;
-    console.log(editButton);
 
     
     if (!editButton) {
-      console.warn(`Edit button not found for section '${sectionId}'`);
       return;
     }
 
@@ -1635,7 +1725,7 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
       setRefreshLimit(limit);
     };
     checkRefreshLimit();
-  }, []);
+  }, [scrapedData]); // Re-check when scrapedData changes (user data loaded)
 
   // Computed values
   const parsedAnalysis = parseAIAnalysis();
@@ -1753,6 +1843,7 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
             sectionLoading={sectionLoading}
             getSectionContent={getSectionContent}
             sectionsWithOptimizedContent={sectionsWithOptimizedContent}
+            optimizationLimit={optimizationLimit}
           />
         </div>
       </div>

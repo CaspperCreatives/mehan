@@ -47,6 +47,24 @@ class ScraperController {
             };
         }
     }
+    /**
+     * Get user object by user ID
+     */
+    async getUserObject(userId) {
+        try {
+            if (!userId) {
+                throw new Error('User ID is required');
+            }
+            const result = await this.scraperService.getUserObject(userId);
+            return result;
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            };
+        }
+    }
 }
 exports.ScraperController = ScraperController;
 exports.default = ScraperController;
