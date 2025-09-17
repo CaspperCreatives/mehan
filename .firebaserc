@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "mehan-7640e"
-  }
+    "default": "mehan-7640e",
+    "y": "mehan-7640e"
+  },
+  "targets": {},
+  "etags": {}
 }

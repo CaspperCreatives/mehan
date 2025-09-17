@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AIAnalysisResult } from '../utils/aiAnalyzer';
 import { Icon, IconNames, getIconNameFromSection } from './Icon';
 import { useLanguage, getTranslation, Language } from '../utils/translations';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRotateRight, faInfoCircle, faWandMagicSparkles, faEdit, faPlay, faStar, faHome } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faInfoCircle, faWandMagicSparkles, faEdit, faPlay, faStar, faHome, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 import gsap from 'gsap';
 import { ExportButtons } from './ExportButtons';
 import { RefreshLimiter } from '../utils/refreshLimiter';
@@ -1069,9 +1069,45 @@ const SectionsSlider: React.FC<{
     return <SectionDetails />;
   };
 
+  // Slider controls
+  const sliderRef = useRef<HTMLDivElement | null>(null);
+  const scrollSlider = (direction: 'left' | 'right') => {
+    const container = sliderRef.current;
+    if (!container) return;
+    const scrollAmount = Math.max(200, Math.floor(container.clientWidth * 0.8));
+    const delta = direction === 'left' ? -scrollAmount : scrollAmount;
+    container.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div className="sections-slider">
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => scrollSlider('left')}
+          style={{
+            position: 'absolute',
+            left: '-6px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 2,
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: '1px solid #e5e7eb',
+            background: '#fff',
+            color: '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+          }}
+          aria-label="Scroll left"
+        >
+          <FontAwesomeIcon icon={faChevronLeft} style={{ fontSize: '12px' }} />
+        </button>
+
+        <div className="sections-slider" ref={sliderRef} style={{ overflowX: 'auto', scrollBehavior: 'smooth' }}>
         {/* Home Option */}
         <div
           className={`section-card ${selectedSection && selectedSection.title === 'home' ? 'active' : ''}`}
@@ -1145,6 +1181,32 @@ const SectionsSlider: React.FC<{
             </span>
           </div>
         )}
+        </div>
+
+        <button
+          onClick={() => scrollSlider('right')}
+          style={{
+            position: 'absolute',
+            right: '-6px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 2,
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            border: '1px solid #e5e7eb',
+            background: '#fff',
+            color: '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+          }}
+          aria-label="Scroll right"
+        >
+          <FontAwesomeIcon icon={faChevronRight} style={{ fontSize: '12px' }} />
+        </button>
       </div>
 
       {renderSectionContent()}

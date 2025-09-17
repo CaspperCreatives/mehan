@@ -11,7 +11,7 @@ export class CorsHelper {
    * @param response - Express response object
    */
   static applyCorsHeaders(response: Response): void {
-    response.set('Access-Control-Allow-Origin', '*');
+    response.set('Access-Control-Allow-Origin', process.env.BASE_URL);
     response.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
     response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, sec-ch-ua, sec-ch-ua-mobile, sec-ch-ua-platform, sec-fetch-dest, sec-fetch-mode, sec-fetch-site, user-agent');
     response.set('Access-Control-Allow-Credentials', 'true');
