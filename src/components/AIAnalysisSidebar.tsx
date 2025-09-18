@@ -1791,7 +1791,7 @@ export const AIAnalysisSidebar: React.FC<AIAnalysisSidebarProps> = ({
 
   // Computed values
   const parsedAnalysis = parseAIAnalysis();
-  const overallScore = useCountUp(profileScore?.totalScore || 0);
+  const overallScore = useCountUp(profileScore?.percentage || 0);
 
   // Early returns for loading, error, and no analysis states
   if (loading) {

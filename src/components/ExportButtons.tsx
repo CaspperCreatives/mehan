@@ -24,15 +24,8 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({ profile, aiAnalysi
     setExportType(type);
 
     try {
-      // Robust score extraction across different shapes
-      const score = (
-        aiAnalysis?.overallScore ||
-        aiAnalysis?.totalScore ||
-        aiAnalysis?.score ||
-        aiAnalysis?.profileScore?.totalScore ||
-        aiAnalysis?.data?.profileScore?.totalScore ||
-        0
-      );
+      // Use the correct percentage value from profileScore
+      const score = aiAnalysis?.profileScore?.percentage || 0;
 
       // Resolve profile fields from multiple possible sources
       const aiProfile = aiAnalysis?.profile?.[0] || aiAnalysis?.data?.profile?.[0] || {};
